@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>বাঞ্ছারামপুর পৌরসভা - ডিজিটাল টাস্ক ম্যানেজমেন্ট</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Hind Siliguri', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+
+    <!-- Firebase SDKs with New Configuration -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
+
+        // Updated Firebase Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyA5DXs7-oY1npoM0hRpWBQiMfslyQrSYzI",
+            authDomain: "contact-manager-ef055.firebaseapp.com",
+            projectId: "contact-manager-ef055",
+            storageBucket: "contact-manager-ef055.firebasestorage.app",
+            messagingSenderId: "755047029625",
+            appId: "1:755047029625:web:56bf153f51276e7429eda8",
+            measurementId: "G-NN7Z37C14W"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const db = getFirestore(app);
+
+        window.db = db;
+        window.fs = { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, query, orderBy };
+    </script>
+</head>
+<body class="text-gray-800 antialiased">
+
+    <!-- Header / Navbar -->
+    <header class="bg-emerald-700 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3 space-x-reverse">
+                <div class="bg-white text-emerald-700 p-2 rounded-full w-10 h-10 flex items-center justify-center font-bold text-xl shadow">
+                    ব
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold leading-tight">বাঞ্ছারামপুর পৌরসভা</h1>
+                    <p class="text-xs text-emerald-100">টাস্ক ম্যানেজমেন্ট ও ফলোআপ সিস্টেম</p>
+                </div>
+            </div>
+            
+            <div id="userHeaderInfo" class="hidden flex items-center space-x-4 space-x-reverse">
+                <div class="text-right">
+                    <p id="headerUserName" class="font-semibold text-sm">ব্যবহারকারীর নাম</p>
+                    <span id="headerUserRoleBadge" class="inline-block text-[11px] bg-emerald-800 px-2 py-0.5 rounded-full text-emerald-200">
+                        কর্মচারী
+                    </span>
+                </div>
+                <button onclick="logout()" class="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-1.5 rounded transition flex items-center gap-1">
+                    <i class="fa-solid fa-right-from-bracket"></i> লগআউট
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto p-4 md:p-6">
+        
+        <!-- Auth Section -->
+        <div id="authSection" class="max-w-md mx-auto my-12 bg-white p-8 rounded-xl shadow-lg border border-gray-100">
+            <div class="text-center mb-6">
+                <i class="fa-solid fa-city text-5xl text-emerald-600 mb-2"></i>
+                <h2 class="text-2xl font-bold text-gray-800">সিস্টেমে প্রবেশ করুন</h2>
+                <p class="text-sm text-gray-500 mt-1">বাঞ্ছারামপুর পৌরসভা ডিজিটাল পোর্টালে আপনার ইউজারনেম দিয়ে লগইন করুন</p>
+            </div>
+
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">ইউজারনেম</label>
+                    <input type="text" id="loginUsername" required placeholder="উদাহরণ: admin বা karim" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                </div>
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">পাসওয়ার্ড</label>
+                    <input type="password" id="loginPassword" required placeholder="••••••••" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                </div>
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 rounded-lg transition shadow">
+                    লগইন করুন
+                </button>
+            </form>
+            <div id="loginError" class="mt-4 text-center text-sm text-red-600 hidden"></div>
+        </div>
+
+        <!-- Dashboard Section -->
+        <div id="dashboardSection" class="hidden space-y-6">
+            
+            <!-- Navigation Tabs & Action Bar -->
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                <div class="flex flex-wrap gap-2">
+                    <button id="tabTasksBtn" onclick="switchTab('tasks')" class="px-4 py-2 rounded-lg font-medium text-sm transition bg-emerald-600 text-white">
+                        <i class="fa-solid fa-list-check mr-1"></i> কাজের তালিকা
+                    </button>
+                    <button id="tabStaffBtn" onclick="switchTab('staff')" class="px-4 py-2 rounded-lg font-medium text-sm transition text-gray-600 hover:bg-gray-100">
+                        <i class="fa-solid fa-users mr-1"></i> স্টাফ ও রোল ব্যবস্থাপনা
+                    </button>
+                </div>
+
+                <div class="flex gap-2 w-full md:w-auto justify-end">
+                    <button id="assignTaskBtn" onclick="openTaskModal()" class="hidden bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-4 py-2 rounded-lg transition shadow flex items-center gap-2">
+                        <i class="fa-solid fa-plus"></i> নতুন কাজ এসাইন করুন
+                    </button>
+                </div>
+            </div>
+
+            <!-- TAB 1: Tasks Management -->
+            <div id="tasksTabView" class="space-y-4">
+                
+                <!-- Filters -->
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-wrap gap-3 items-center">
+                    <span class="text-sm font-semibold text-gray-600"><i class="fa-solid fa-filter mr-1"></i> ফিল্টার:</span>
+                    <select id="filterBranch" onchange="renderTasks()" class="text-sm border rounded-lg px-3 py-1.5 focus:outline-none">
+                        <option value="ALL">সকল শাখা</option>
+                        <option value="সাধারণ প্রশাসন">সাধারণ প্রশাসন</option>
+                        <option value="প্রকৌশল শাখা">প্রকৌশল শাখা</option>
+                        <option value="স্বাস্থ্য ও পরিচ্ছন্নতা">স্বাস্থ্য ও পরিচ্ছন্নতা</option>
+                        <option value="কর আদায় শাখা">কর আদায় শাখা</option>
+                        <option value="পানি সরবরাহ শাখা">পানি সরবরাহ শাখা</option>
+                        <option value="হিসাব শাখা">হিসাব শাখা</option>
+                        <option value="ট্রেড লাইসেন্স">ট্রেড লাইসেন্স শাখা</option>
+                    </select>
+
+                    <select id="filterStatus" onchange="renderTasks()" class="text-sm border rounded-lg px-3 py-1.5 focus:outline-none">
+                        <option value="ALL">সকল স্ট্যাটাস</option>
+                        <option value="নতুন">নতুন</option>
+                        <option value="চলমান">চলমান</option>
+                        <option value="পর্যালোচনাধীন">পর্যালোচনাধীন</option>
+                        <option value="সম্পন্ন">সম্পন্ন</option>
+                    </select>
+                </div>
+
+                <!-- Task Cards Grid -->
+                <div id="taskListGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Dynamic task cards -->
+                </div>
+            </div>
+
+            <!-- TAB 2: Staff & Role Management -->
+            <div id="staffTabView" class="hidden space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    
+                    <!-- Registration Form -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 h-fit">
+                        <h3 class="text-lg font-bold text-gray-800 mb-2 border-b pb-2">
+                            <i class="fa-solid fa-user-plus text-emerald-600 mr-1"></i> নতুন স্টাফ রেজিস্টার
+                        </h3>
+                        <p class="text-xs text-gray-500 mb-4">নিবন্ধনের জন্য তথ্য প্রদান করুন। পরবর্তীতে ভূমিকা পরিবর্তন সম্ভব।</p>
+                        
+                        <form onsubmit="handleCreateStaff(event)" class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1">স্টাফের নাম *</label>
+                                <input type="text" id="staffFullName" required placeholder="যেমন: আব্দুল করিম" class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-emerald-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1">ইউজারনেম (আইডি) *</label>
+                                <input type="text" id="staffUsername" required placeholder="যেমন: karim123" class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-emerald-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1">পাসওয়ার্ড *</label>
+                                <input type="password" id="staffPassword" required placeholder="••••••••" class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-emerald-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1">শাখা</label>
+                                <select id="staffBranch" class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-emerald-500">
+                                    <option value="সাধারণ প্রশাসন">সাধারণ প্রশাসন</option>
+                                    <option value="প্রকৌশল শাখা">প্রকৌশল শাখা</option>
+                                    <option value="স্বাস্থ্য ও পরিচ্ছন্নতা">স্বাস্থ্য ও পরিচ্ছন্নতা</option>
+                                    <option value="কর আদায় শাখা">কর আদায় শাখা</option>
+                                    <option value="পানি সরবরাহ শাখা">পানি সরবরাহ শাখা</option>
+                                    <option value="হিসাব শাখা">হিসাব শাখা</option>
+                                    <option value="ট্রেড লাইসেন্স">ট্রেড লাইসেন্স শাখা</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium py-2 rounded-lg transition">
+                                স্টাফ যুক্ত করুন
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Staff List & Dynamic Role Management -->
+                    <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2 flex justify-between items-center">
+                            <span><i class="fa-solid fa-users-gear text-emerald-600 mr-1"></i> নিবন্ধিত স্টাফ ও ভূমিকা (Role) ব্যবস্থাপনা</span>
+                        </h3>
+                        
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-gray-50 border-b text-gray-600">
+                                    <tr>
+                                        <th class="p-3">স্টাফের নাম</th>
+                                        <th class="p-3">ইউজারনেম</th>
+                                        <th class="p-3">শাখা</th>
+                                        <th class="p-3">বর্তমান রোল (Role)</th>
+                                        <th class="p-3 text-center">একশন</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="staffTableBody" class="divide-y">
+                                    <!-- Dynamic Rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Modal: Assign Task -->
+    <div id="taskModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white w-full max-w-lg rounded-xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
+            <div class="bg-emerald-700 text-white px-6 py-4 flex justify-between items-center">
+                <h3 class="font-bold text-lg"><i class="fa-solid fa-tasks mr-2"></i>নতুন কাজ বন্টন</h3>
+                <button onclick="closeTaskModal()" class="text-white hover:text-gray-200 text-xl font-bold">&times;</button>
+            </div>
+            
+            <form onsubmit="handleCreateTask(event)" class="p-6 overflow-y-auto space-y-4 text-sm custom-scrollbar">
+                <div>
+                    <label class="block font-semibold text-gray-700 mb-1">কাজের শিরোনাম *</label>
+                    <input type="text" id="taskTitle" required placeholder="কাজের শিরোনাম লিখুন..." class="w-full border px-3 py-2 rounded-lg">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-gray-700 mb-1">শাখা *</label>
+                        <select id="taskBranch" required class="w-full border px-3 py-2 rounded-lg">
+                            <option value="সাধারণ প্রশাসন">সাধারণ প্রশাসন</option>
+                            <option value="প্রকৌশল শাখা">প্রকৌশল শাখা</option>
+                            <option value="স্বাস্থ্য ও পরিচ্ছন্নতা">স্বাস্থ্য ও পরিচ্ছন্নতা</option>
+                            <option value="কর আদায় শাখা">কর আদায় শাখা</option>
+                            <option value="পানি সরবরাহ শাখা">পানি সরবরাহ শাখা</option>
+                            <option value="হিসাব শাখা">হিসাব শাখা</option>
+                            <option value="ট্রেড লাইসেন্স">ট্রেড লাইসেন্স শাখা</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-gray-700 mb-1">গুরুত্ব *</label>
+                        <select id="taskPriority" required class="w-full border px-3 py-2 rounded-lg">
+                            <option value="সাধারণ">সাধারণ</option>
+                            <option value="গুরুত্বপূর্ণ">গুরুত্বপূর্ণ</option>
+                            <option value="জরুরি">জরুরি</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Select Supervisor -->
+                <div>
+                    <label class="block font-semibold text-gray-700 mb-1"><i class="fa-solid fa-user-shield text-emerald-600 mr-1"></i>সুপারভাইজার / তদারককারী নির্বাচন করুন</label>
+                    <select id="taskSupervisor" class="w-full border px-3 py-2 rounded-lg">
+                        <option value="">-- যেকোনো একজন নির্ধারণ করুন --</option>
+                    </select>
+                </div>
+
+                <!-- Select Employee -->
+                <div>
+                    <label class="block font-semibold text-gray-700 mb-1"><i class="fa-solid fa-user text-blue-600 mr-1"></i>দায়িত্বপ্রাপ্ত কর্মী (Employee) নির্বাচন করুন *</label>
+                    <select id="taskEmployee" required class="w-full border px-3 py-2 rounded-lg">
+                        <option value="">-- কর্মী নির্বাচন করুন --</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-gray-700 mb-1">শেষ করার তারিখ (Deadline) *</label>
+                    <input type="date" id="taskDeadline" required class="w-full border px-3 py-2 rounded-lg">
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-gray-700 mb-1">বিবরণ/নির্দেশনা</label>
+                    <textarea id="taskDescription" rows="3" placeholder="কাজের বিস্তারিত বিবরণ বা নির্দেশনা লিখুন..." class="w-full border px-3 py-2 rounded-lg"></textarea>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeTaskModal()" class="px-4 py-2 border rounded-lg hover:bg-gray-100">বাতিল</button>
+                    <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg">কাজ এসাইন করুন</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Task Followup / Detail view -->
+    <div id="followupModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white w-full max-w-xl rounded-xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
+            <div class="bg-gray-800 text-white px-6 py-4 flex justify-between items-center">
+                <div>
+                    <h3 id="modalTaskTitle" class="font-bold text-lg">কাজের নাম</h3>
+                    <p id="modalTaskMeta" class="text-xs text-gray-300">শাখা | ডেডলাইন</p>
+                </div>
+                <button onclick="closeFollowupModal()" class="text-white hover:text-gray-200 text-xl font-bold">&times;</button>
+            </div>
+
+            <div class="p-6 overflow-y-auto space-y-4 custom-scrollbar text-sm">
+                <!-- Status Updater -->
+                <div class="bg-gray-50 p-3 rounded-lg border flex justify-between items-center">
+                    <span class="font-semibold text-gray-700">কাজের স্ট্যাটাস পরিবর্তন:</span>
+                    <select id="updateStatusSelect" onchange="updateTaskStatusFromModal()" class="border px-3 py-1.5 rounded-lg text-sm bg-white font-medium">
+                        <option value="নতুন">নতুন</option>
+                        <option value="চলমান">চলমান</option>
+                        <option value="পর্যালোচনাধীন">পর্যালোচনাধীন</option>
+                        <option value="সম্পন্ন">সম্পন্ন</option>
+                    </select>
+                </div>
+
+                <!-- Assignment details -->
+                <div class="grid grid-cols-2 gap-2 text-xs bg-emerald-50 p-3 rounded-lg border border-emerald-100">
+                    <div><strong>তদারককারী (Supervisor):</strong> <span id="modalSupervisorName">-</span></div>
+                    <div><strong>দায়িত্বপ্রাপ্ত কর্মী:</strong> <span id="modalEmployeeName">-</span></div>
+                </div>
+
+                <div>
+                    <p class="font-semibold text-gray-700">বিবরণ:</p>
+                    <p id="modalTaskDesc" class="text-gray-600 bg-gray-50 p-3 rounded-lg mt-1 text-xs">বিবরণ দেওয়া হয়নি</p>
+                </div>
+
+                <!-- Followup Comments -->
+                <div class="border-t pt-4">
+                    <h4 class="font-bold text-gray-800 mb-2 flex items-center gap-1">
+                        <i class="fa-solid fa-comments text-emerald-600"></i> ফলোআপ মন্তব্য ও অগ্রগতি রিপোর্ট
+                    </h4>
+                    
+                    <div id="commentsList" class="space-y-2 mb-3 max-h-48 overflow-y-auto custom-scrollbar p-1">
+                        <!-- Dynamic Comments -->
+                    </div>
+
+                    <form onsubmit="handleAddComment(event)" class="flex gap-2">
+                        <input type="text" id="newCommentText" required placeholder="আপনার মতামত বা অগ্রগতির আপডেট লিখুন..." class="flex-1 border px-3 py-2 rounded-lg text-sm">
+                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium">পাঠান</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        const DEFAULT_ADMIN = {
+            id: 'admin',
+            username: 'admin',
+            password: '123',
+            name: 'পৌর মেয়র / সুপার এডমিন',
+            branch: 'সাধারণ প্রশাসন',
+            role: 'Super Admin'
+        };
+
+        let currentUser = null;
+        let allTasks = [];
+        let allStaff = [];
+        let currentViewingTaskId = null;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initFirebaseListener();
+            checkSession();
+        });
+
+        function initFirebaseListener() {
+            if (!window.db) {
+                setTimeout(initFirebaseListener, 500);
+                return;
+            }
+
+            const { collection, onSnapshot } = window.fs;
+
+            onSnapshot(collection(window.db, "staffs"), (snapshot) => {
+                allStaff = [];
+                snapshot.forEach((doc) => {
+                    allStaff.push({ id: doc.id, ...doc.data() });
+                });
+
+                if (allStaff.length === 0) {
+                    saveStaffToCloud(DEFAULT_ADMIN);
+                }
+
+                renderStaffTable();
+                populateModalStaffDropdowns();
+            });
+
+            onSnapshot(collection(window.db, "tasks"), (snapshot) => {
+                allTasks = [];
+                snapshot.forEach((doc) => {
+                    allTasks.push({ id: doc.id, ...doc.data() });
+                });
+                renderTasks();
+            });
+        }
+
+        function checkSession() {
+            const saved = localStorage.getItem('bp_user');
+            if (saved) {
+                currentUser = JSON.parse(saved);
+                showDashboard();
+            } else {
+                showAuth();
+            }
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const uName = document.getElementById('loginUsername').value.trim();
+            const pass = document.getElementById('loginPassword').value.trim();
+
+            let found = allStaff.find(s => s.username === uName && s.password === pass);
+
+            if (!found && uName === 'admin' && pass === '123') {
+                found = DEFAULT_ADMIN;
+            }
+
+            if (found) {
+                currentUser = found;
+                localStorage.setItem('bp_user', JSON.stringify(currentUser));
+                showDashboard();
+                document.getElementById('loginError').classList.add('hidden');
+            } else {
+                const err = document.getElementById('loginError');
+                err.innerText = "ইউজারনেম বা পাসওয়ার্ড সঠিক নয়!";
+                err.classList.remove('hidden');
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            localStorage.removeItem('bp_user');
+            showAuth();
+        }
+
+        function showAuth() {
+            document.getElementById('authSection').classList.remove('hidden');
+            document.getElementById('dashboardSection').classList.add('hidden');
+            document.getElementById('userHeaderInfo').classList.add('hidden');
+        }
+
+        function showDashboard() {
+            document.getElementById('authSection').classList.add('hidden');
+            document.getElementById('dashboardSection').classList.remove('hidden');
+            document.getElementById('userHeaderInfo').classList.remove('hidden');
+
+            document.getElementById('headerUserName').innerText = currentUser.name;
+            document.getElementById('headerUserRoleBadge').innerText = currentUser.role || 'কর্মচারী';
+
+            if (currentUser.role === 'Super Admin') {
+                document.getElementById('assignTaskBtn').classList.remove('hidden');
+                document.getElementById('tabStaffBtn').classList.remove('hidden');
+            } else {
+                document.getElementById('assignTaskBtn').classList.add('hidden');
+                document.getElementById('tabStaffBtn').classList.add('hidden');
+            }
+
+            renderTasks();
+        }
+
+        function switchTab(tab) {
+            const tasksView = document.getElementById('tasksTabView');
+            const staffView = document.getElementById('staffTabView');
+            const tabTasksBtn = document.getElementById('tabTasksBtn');
+            const tabStaffBtn = document.getElementById('tabStaffBtn');
+
+            if (tab === 'tasks') {
+                tasksView.classList.remove('hidden');
+                staffView.classList.add('hidden');
+                tabTasksBtn.className = "px-4 py-2 rounded-lg font-medium text-sm transition bg-emerald-600 text-white";
+                tabStaffBtn.className = "px-4 py-2 rounded-lg font-medium text-sm transition text-gray-600 hover:bg-gray-100";
+            } else {
+                tasksView.classList.add('hidden');
+                staffView.classList.remove('hidden');
+                tabStaffBtn.className = "px-4 py-2 rounded-lg font-medium text-sm transition bg-emerald-600 text-white";
+                tabTasksBtn.className = "px-4 py-2 rounded-lg font-medium text-sm transition text-gray-600 hover:bg-gray-100";
+            }
+        }
+
+        function handleCreateStaff(e) {
+            e.preventDefault();
+            const name = document.getElementById('staffFullName').value.trim();
+            const username = document.getElementById('staffUsername').value.trim();
+            const password = document.getElementById('staffPassword').value.trim();
+            const branch = document.getElementById('staffBranch').value;
+
+            if (allStaff.some(s => s.username === username)) {
+                alert('এই ইউজারনেমটি আগে থেকেই রয়েছে! অন্য ইউজারনেম ব্যবহার করুন।');
+                return;
+            }
+
+            const newStaff = {
+                id: 'staff_' + Date.now(),
+                name,
+                username,
+                password,
+                branch,
+                role: 'Employee'
+            };
+
+            saveStaffToCloud(newStaff);
+            e.target.reset();
+            alert('নতুন স্টাফ সফলভাবে নিবন্ধিত হয়েছে!');
+        }
+
+        function saveStaffToCloud(staffObj) {
+            const { doc, setDoc } = window.fs;
+            setDoc(doc(window.db, "staffs", staffObj.id), staffObj);
+        }
+
+        function updateUserRole(staffId, newRole) {
+            const { doc, updateDoc } = window.fs;
+            updateDoc(doc(window.db, "staffs", staffId), {
+                role: newRole
+            }).then(() => {
+                alert('স্টাফের ভূমিকা/রোল সফলভাবে আপডেট করা হয়েছে।');
+            });
+        }
+
+        function renderStaffTable() {
+            const tbody = document.getElementById('staffTableBody');
+            tbody.innerHTML = '';
+
+            allStaff.forEach(s => {
+                const tr = document.createElement('tr');
+                tr.className = "border-b hover:bg-gray-50";
+
+                tr.innerHTML = `
+                    <td class="p-3 font-medium text-gray-800">${s.name}</td>
+                    <td class="p-3 text-gray-600">${s.username}</td>
+                    <td class="p-3 text-gray-600">${s.branch || '-'}</td>
+                    <td class="p-3">
+                        <select onchange="updateUserRole('${s.id}', this.value)" class="border rounded px-2 py-1 text-xs font-semibold ${getRoleBadgeClass(s.role)}">
+                            <option value="Employee" ${s.role === 'Employee' ? 'selected' : ''}>কর্মচারী (Employee)</option>
+                            <option value="Supervisor" ${s.role === 'Supervisor' ? 'selected' : ''}>তদারককারী (Supervisor)</option>
+                            <option value="Super Admin" ${s.role === 'Super Admin' ? 'selected' : ''}>সুপার এডমিন (Super Admin)</option>
+                        </select>
+                    </td>
+                    <td class="p-3 text-center">
+                        <button onclick="deleteStaff('${s.id}')" class="text-red-500 hover:text-red-700 text-xs px-2 py-1 rounded border border-red-200">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function getRoleBadgeClass(role) {
+            if (role === 'Super Admin') return 'bg-purple-100 text-purple-800 border-purple-300';
+            if (role === 'Supervisor') return 'bg-blue-100 text-blue-800 border-blue-300';
+            return 'bg-gray-100 text-gray-800 border-gray-300';
+        }
+
+        function deleteStaff(id) {
+            if (confirm('আপনি কি সত্যিই এই স্টাফ প্রোফাইলটি মুছে ফেলতে চান?')) {
+                const { doc, deleteDoc } = window.fs;
+                deleteDoc(doc(window.db, "staffs", id));
+            }
+        }
+
+        function populateModalStaffDropdowns() {
+            const supSelect = document.getElementById('taskSupervisor');
+            const empSelect = document.getElementById('taskEmployee');
+
+            supSelect.innerHTML = '<option value="">-- যেকোনো একজন নির্ধারণ করুন --</option>';
+            empSelect.innerHTML = '<option value="">-- কর্মী নির্বাচন করুন --</option>';
+
+            allStaff.forEach(s => {
+                const opt1 = document.createElement('option');
+                opt1.value = s.name;
+                opt1.innerText = `${s.name} (${s.branch}) - ${s.role || 'কর্মচারী'}`;
+                supSelect.appendChild(opt1);
+
+                const opt2 = document.createElement('option');
+                opt2.value = s.name;
+                opt2.innerText = `${s.name} (${s.branch}) - ${s.role || 'কর্মচারী'}`;
+                empSelect.appendChild(opt2);
+            });
+        }
+
+        function openTaskModal() {
+            populateModalStaffDropdowns();
+            document.getElementById('taskModal').classList.remove('hidden');
+        }
+
+        function closeTaskModal() {
+            document.getElementById('taskModal').classList.add('hidden');
+        }
+
+        function handleCreateTask(e) {
+            e.preventDefault();
+
+            const title = document.getElementById('taskTitle').value.trim();
+            const branch = document.getElementById('taskBranch').value;
+            const priority = document.getElementById('taskPriority').value;
+            const supervisor = document.getElementById('taskSupervisor').value;
+            const employee = document.getElementById('taskEmployee').value;
+            const deadline = document.getElementById('taskDeadline').value;
+            const description = document.getElementById('taskDescription').value.trim();
+
+            const newTask = {
+                id: 'task_' + Date.now(),
+                title,
+                branch,
+                priority,
+                supervisor: supervisor || 'নির্ধারিত নয়',
+                assignedTo: employee,
+                deadline,
+                description,
+                status: 'নতুন',
+                createdAt: new Date().toLocaleDateString('bn-BD'),
+                comments: []
+            };
+
+            const { doc, setDoc } = window.fs;
+            setDoc(doc(window.db, "tasks", newTask.id), newTask).then(() => {
+                closeTaskModal();
+                e.target.reset();
+                alert('কাজটি সফলভাবে এসাইন করা হয়েছে!');
+            });
+        }
+
+        function renderTasks() {
+            const grid = document.getElementById('taskListGrid');
+            grid.innerHTML = '';
+
+            const branchFilter = document.getElementById('filterBranch').value;
+            const statusFilter = document.getElementById('filterStatus').value;
+
+            let filtered = allTasks.filter(t => {
+                if (branchFilter !== 'ALL' && t.branch !== branchFilter) return false;
+                if (statusFilter !== 'ALL' && t.status !== statusFilter) return false;
+
+                if (currentUser.role === 'Employee') {
+                    return t.assignedTo === currentUser.name;
+                }
+                if (currentUser.role === 'Supervisor') {
+                    return t.supervisor === currentUser.name || t.assignedTo === currentUser.name;
+                }
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-400 bg-white rounded-xl border">কোনো কাজ পাওয়া যায়নি।</div>`;
+                return;
+            }
+
+            filtered.forEach(task => {
+                const card = document.createElement('div');
+                card.className = "bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between";
+
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-xs px-2.5 py-1 rounded-full font-semibold ${getStatusBadgeClass(task.status)}">
+                                ${task.status}
+                            </span>
+                            <span class="text-xs font-semibold px-2 py-0.5 rounded ${getPriorityBadgeClass(task.priority)}">
+                                ${task.priority}
+                            </span>
+                        </div>
+                        <h4 class="font-bold text-gray-800 text-base mb-2 cursor-pointer hover:text-emerald-600" onclick="openFollowupModal('${task.id}')">
+                            ${task.title}
+                        </h4>
+                        <div class="text-xs text-gray-500 space-y-1 mb-4">
+                            <p><i class="fa-solid fa-building text-gray-400 mr-1"></i> <strong>শাখা:</strong> ${task.branch}</p>
+                            <p><i class="fa-solid fa-user-shield text-emerald-600 mr-1"></i> <strong>তদারককারী:</strong> ${task.supervisor}</p>
+                            <p><i class="fa-solid fa-user text-blue-600 mr-1"></i> <strong>কর্মী:</strong> ${task.assignedTo}</p>
+                            <p><i class="fa-solid fa-calendar-day text-red-400 mr-1"></i> <strong>ডেডলাইন:</strong> ${task.deadline}</p>
+                        </div>
+                    </div>
+
+                    <div class="border-t pt-3 flex justify-between items-center text-xs">
+                        <span class="text-gray-400"><i class="fa-solid fa-comments"></i> ${task.comments ? task.comments.length : 0} আপডেট</span>
+                        <button onclick="openFollowupModal('${task.id}')" class="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-semibold px-3 py-1.5 rounded-lg transition">
+                            ফলোআপ ও বিস্তারিত
+                        </button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function getStatusBadgeClass(status) {
+            switch (status) {
+                case 'নতুন': return 'bg-blue-100 text-blue-800';
+                case 'চলমান': return 'bg-yellow-100 text-yellow-800';
+                case 'পর্যালোচনাধীন': return 'bg-purple-100 text-purple-800';
+                case 'সম্পন্ন': return 'bg-green-100 text-green-800';
+                default: return 'bg-gray-100 text-gray-800';
+            }
+        }
+
+        function getPriorityBadgeClass(priority) {
+            switch (priority) {
+                case 'জরুরি': return 'bg-red-100 text-red-700';
+                case 'গুরুত্বপূর্ণ': return 'bg-orange-100 text-orange-700';
+                default: return 'bg-gray-100 text-gray-600';
+            }
+        }
+
+        function openFollowupModal(taskId) {
+            currentViewingTaskId = taskId;
+            const task = allTasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            document.getElementById('modalTaskTitle').innerText = task.title;
+            document.getElementById('modalTaskMeta').innerText = `${task.branch} | ডেডলাইন: ${task.deadline}`;
+            document.getElementById('modalSupervisorName').innerText = task.supervisor;
+            document.getElementById('modalEmployeeName').innerText = task.assignedTo;
+            document.getElementById('modalTaskDesc').innerText = task.description || 'কোনো বিস্তারিত বিবরণ দেওয়া হয়নি।';
+            document.getElementById('updateStatusSelect').value = task.status;
+
+            renderComments(task.comments || []);
+            document.getElementById('followupModal').classList.remove('hidden');
+        }
+
+        function closeFollowupModal() {
+            document.getElementById('followupModal').classList.add('hidden');
+            currentViewingTaskId = null;
+        }
+
+        function updateTaskStatusFromModal() {
+            if (!currentViewingTaskId) return;
+            const newStatus = document.getElementById('updateStatusSelect').value;
+
+            const { doc, updateDoc } = window.fs;
+            updateDoc(doc(window.db, "tasks", currentViewingTaskId), {
+                status: newStatus
+            });
+        }
+
+        function renderComments(comments) {
+            const list = document.getElementById('commentsList');
+            list.innerHTML = '';
+
+            if (comments.length === 0) {
+                list.innerHTML = `<p class="text-xs text-gray-400 italic">এখনো কোনো মন্তব্য বা আপডেট দেওয়া হয়নি।</p>`;
+                return;
+            }
+
+            comments.forEach(c => {
+                const div = document.createElement('div');
+                div.className = "bg-gray-50 p-2.5 rounded-lg border border-gray-100 text-xs";
+                div.innerHTML = `
+                    <div class="flex justify-between font-semibold text-gray-700 mb-1">
+                        <span>${c.userName} (${c.userRole})</span>
+                        <span class="text-gray-400 text-[10px]">${c.time}</span>
+                    </div>
+                    <p class="text-gray-600">${c.text}</p>
+                `;
+                list.appendChild(div);
+            });
+
+            list.scrollTop = list.scrollHeight;
+        }
+
+        function handleAddComment(e) {
+            e.preventDefault();
+            if (!currentViewingTaskId) return;
+
+            const input = document.getElementById('newCommentText');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const task = allTasks.find(t => t.id === currentViewingTaskId);
+            const comments = task.comments || [];
+
+            const newComment = {
+                userName: currentUser.name,
+                userRole: currentUser.role || 'কর্মচারী',
+                text,
+                time: new Date().toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' })
+            };
+
+            comments.push(newComment);
+
+            const { doc, updateDoc } = window.fs;
+            updateDoc(doc(window.db, "tasks", currentViewingTaskId), { comments }).then(() => {
+                input.value = '';
+                renderComments(comments);
+            });
+        }
+    </script>
+</body>
+</html>
