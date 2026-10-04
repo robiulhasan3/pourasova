@@ -38,7 +38,6 @@
         import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
 
-        // Updated Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyA5DXs7-oY1npoM0hRpWBQiMfslyQrSYzI",
             authDomain: "contact-manager-ef055.firebaseapp.com",
@@ -49,7 +48,6 @@
             measurementId: "G-NN7Z37C14W"
         };
 
-        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const analytics = getAnalytics(app);
         const db = getFirestore(app);
@@ -123,13 +121,15 @@
                     <button id="tabTasksBtn" onclick="switchTab('tasks')" class="px-4 py-2 rounded-lg font-medium text-sm transition bg-emerald-600 text-white">
                         <i class="fa-solid fa-list-check mr-1"></i> কাজের তালিকা
                     </button>
-                    <button id="tabStaffBtn" onclick="switchTab('staff')" class="px-4 py-2 rounded-lg font-medium text-sm transition text-gray-600 hover:bg-gray-100">
-                        <i class="fa-solid fa-users mr-1"></i> স্টাফ ও রোল ব্যবস্থাপনা
+                    <!-- শুধুমাত্র মেয়রের (Super Admin) জন্য দৃশ্যমান হবে -->
+                    <button id="tabStaffBtn" onclick="switchTab('staff')" class="hidden px-4 py-2 rounded-lg font-medium text-sm transition text-gray-600 hover:bg-gray-100">
+                        <i class="fa-solid fa-users mr-1"></i> স্টাফ ও শাখা ব্যবস্থাপনা
                     </button>
                 </div>
 
                 <div class="flex gap-2 w-full md:w-auto justify-end">
-                    <button id="assignTaskBtn" onclick="openTaskModal()" class="hidden bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-4 py-2 rounded-lg transition shadow flex items-center gap-2">
+                    <!-- যেকোনো ব্যবহাকারী কাজ এসাইন করতে পারবেন -->
+                    <button id="assignTaskBtn" onclick="openTaskModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-4 py-2 rounded-lg transition shadow flex items-center gap-2">
                         <i class="fa-solid fa-plus"></i> নতুন কাজ এসাইন করুন
                     </button>
                 </div>
@@ -167,7 +167,7 @@
                 </div>
             </div>
 
-            <!-- TAB 2: Staff & Role Management -->
+            <!-- TAB 2: Staff & Role Management (Super Admin / Mayor only) -->
             <div id="staffTabView" class="hidden space-y-6">
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     
@@ -176,7 +176,7 @@
                         <h3 class="text-lg font-bold text-gray-800 mb-2 border-b pb-2">
                             <i class="fa-solid fa-user-plus text-emerald-600 mr-1"></i> নতুন স্টাফ রেজিস্টার
                         </h3>
-                        <p class="text-xs text-gray-500 mb-4">নিবন্ধনের জন্য তথ্য প্রদান করুন। পরবর্তীতে ভূমিকা পরিবর্তন সম্ভব।</p>
+                        <p class="text-xs text-gray-500 mb-4">নিবন্ধনের জন্য তথ্য প্রদান করুন।</p>
                         
                         <form onsubmit="handleCreateStaff(event)" class="space-y-4">
                             <div>
@@ -468,13 +468,15 @@
             document.getElementById('headerUserName').innerText = currentUser.name;
             document.getElementById('headerUserRoleBadge').innerText = currentUser.role || 'কর্মচারী';
 
+            // কেবল Mayor / Super Admin প্রোফাইল সৃষ্টি ও শাখা দেখার অধিকার পাবেন
             if (currentUser.role === 'Super Admin') {
-                document.getElementById('assignTaskBtn').classList.remove('hidden');
                 document.getElementById('tabStaffBtn').classList.remove('hidden');
             } else {
-                document.getElementById('assignTaskBtn').classList.add('hidden');
                 document.getElementById('tabStaffBtn').classList.add('hidden');
             }
+
+            // সবাই কাজ এসাইন করতে পারবে
+            document.getElementById('assignTaskBtn').classList.remove('hidden');
 
             renderTasks();
         }
@@ -491,6 +493,10 @@
                 tabTasksBtn.className = "px-4 py-2 rounded-lg font-medium text-sm transition bg-emerald-600 text-white";
                 tabStaffBtn.className = "px-4 py-2 rounded-lg font-medium text-sm transition text-gray-600 hover:bg-gray-100";
             } else {
+                if (currentUser.role !== 'Super Admin') {
+                    alert('কেবলমাত্র মেয়র/সুপার এডমিন প্রোফাইল বা শাখা পরিচালনা করতে পারবেন।');
+                    return;
+                }
                 tasksView.classList.add('hidden');
                 staffView.classList.remove('hidden');
                 tabStaffBtn.className = "px-4 py-2 rounded-lg font-medium text-sm transition bg-emerald-600 text-white";
@@ -500,6 +506,11 @@
 
         function handleCreateStaff(e) {
             e.preventDefault();
+            if (currentUser.role !== 'Super Admin') {
+                alert('শুধুমাত্র মেয়র/সুপার এডমিন নতুন প্রোফাইল তৈরি করতে পারবেন।');
+                return;
+            }
+
             const name = document.getElementById('staffFullName').value.trim();
             const username = document.getElementById('staffUsername').value.trim();
             const password = document.getElementById('staffPassword').value.trim();
@@ -530,6 +541,10 @@
         }
 
         function updateUserRole(staffId, newRole) {
+            if (currentUser.role !== 'Super Admin') {
+                alert('শুধুমাত্র মেয়র/সুপার এডমিন রোল পরিবর্তন করতে পারবেন।');
+                return;
+            }
             const { doc, updateDoc } = window.fs;
             updateDoc(doc(window.db, "staffs", staffId), {
                 role: newRole
@@ -574,6 +589,10 @@
         }
 
         function deleteStaff(id) {
+            if (currentUser.role !== 'Super Admin') {
+                alert('শুধুমাত্র মেয়র/সুপার এডমিন প্রোফাইল ডিলিট করতে পারবেন।');
+                return;
+            }
             if (confirm('আপনি কি সত্যিই এই স্টাফ প্রোফাইলটি মুছে ফেলতে চান?')) {
                 const { doc, deleteDoc } = window.fs;
                 deleteDoc(doc(window.db, "staffs", id));
@@ -662,6 +681,13 @@
                 return true;
             });
 
+            // অসম্পন্ন কাজগুলো (নতুন, চলমান, পর্যালোচনাধীন) আগে এবং সম্পন্ন কাজগুলো শেষে সাজানো
+            filtered.sort((a, b) => {
+                if (a.status === 'সম্পন্ন' && b.status !== 'সম্পন্ন') return 1;
+                if (a.status !== 'সম্পন্ন' && b.status === 'সম্পন্ন') return -1;
+                return 0;
+            });
+
             if (filtered.length === 0) {
                 grid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-400 bg-white rounded-xl border">কোনো কাজ পাওয়া যায়নি।</div>`;
                 return;
@@ -669,7 +695,8 @@
 
             filtered.forEach(task => {
                 const card = document.createElement('div');
-                card.className = "bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between";
+                const isCompleted = task.status === 'সম্পন্ন';
+                card.className = `bg-white rounded-xl border ${isCompleted ? 'border-gray-200 bg-gray-50/50' : 'border-emerald-100'} p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between`;
 
                 card.innerHTML = `
                     <div>
@@ -681,7 +708,7 @@
                                 ${task.priority}
                             </span>
                         </div>
-                        <h4 class="font-bold text-gray-800 text-base mb-2 cursor-pointer hover:text-emerald-600" onclick="openFollowupModal('${task.id}')">
+                        <h4 class="font-bold text-gray-800 text-base mb-2 cursor-pointer hover:text-emerald-600 ${isCompleted ? 'line-through text-gray-500' : ''}" onclick="openFollowupModal('${task.id}')">
                             ${task.title}
                         </h4>
                         <div class="text-xs text-gray-500 space-y-1 mb-4">
