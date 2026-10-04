@@ -6,6 +6,11 @@
     <title>বাঞ্ছারামপুর পৌরসভা - ডিজিটাল টাস্ক ম্যানেজমেন্ট</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { theme: { extend: { colors: { emerald: {
+            50:'#e8f5ef',100:'#c9e8d9',200:'#9ad3b8',300:'#62b995',400:'#2f9a73',500:'#0b8160',
+            600:'#006a4e',700:'#005a42',800:'#004a36',900:'#003a2a',950:'#00241a' } } } } };
+    </script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts -->
@@ -30,12 +35,36 @@
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
         }
+
+        body { background: linear-gradient(180deg, #eaf4ee 0%, #f5f8f6 220px, #f5f8f6 100%) fixed; }
+        .gov-top { background: #003a2a; }
+        .gov-main { background: #fff; border-bottom: 4px solid #006a4e; box-shadow: 0 2px 10px rgba(0,58,42,.12); }
+        .gov-stripe { height: 4px; background: linear-gradient(90deg, #006a4e 0 70%, #f42a41 70% 100%); }
+        .hero { background: radial-gradient(circle at 15% 20%, rgba(255,255,255,.12), transparent 40%), linear-gradient(135deg, #006a4e, #003a2a); }
+        .hero-dot { position: absolute; right: -60px; bottom: -60px; width: 220px; height: 220px; border-radius: 50%; background: #f42a41; opacity: .9; }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+        #taskListGrid > *, #appListBox, #authSection, #taskStats > div, #appStats > div { animation: fadeUp .35s ease both; }
+        #taskListGrid > div:not(.col-span-full) { transition: transform .18s, box-shadow .18s; border-top: 3px solid #006a4e; }
+        #taskListGrid > div:not(.col-span-full):hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(0,58,42,.15); }
+        #taskStats > div, #appStats > div { border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,.08); border-top: 3px solid #006a4e; background-color: #fff; }
+        #taskStats > div:nth-child(2), #appStats > div:nth-child(2) { border-top-color: #3b82f6; }
+        #taskStats > div:nth-child(3), #appStats > div:nth-child(3) { border-top-color: #eab308; }
+        #taskStats > div:nth-child(4), #appStats > div:nth-child(4) { border-top-color: #16a34a; }
+        #taskStats > div:nth-child(5), #appStats > div:nth-child(5) { border-top-color: #f42a41; }
+        #taskStats .text-lg, #appStats .text-lg { font-size: 1.5rem; }
+        button { transition: background-color .15s, transform .1s, box-shadow .15s; }
+        button:active { transform: scale(.97); }
+        table tbody tr { transition: background-color .12s; }
+        input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 3px rgba(0,106,78,.18); }
+        .fixed.inset-0 > div { animation: fadeUp .25s ease both; }
+        .bg-white.rounded-xl.shadow-sm { box-shadow: 0 2px 10px rgba(0,58,42,.07); }
+        @media print { header, footer, #taskStats, #appStats, nav { display: none !important; } }
     </style>
 
     <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, query, orderBy, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, query, orderBy, addDoc, serverTimestamp, arrayUnion, deleteField, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
 
         const firebaseConfig = {
@@ -49,67 +78,82 @@
         };
 
         const app = initializeApp(firebaseConfig);
-        const analytics = getAnalytics(app);
+        try { getAnalytics(app); } catch (e) { console.warn("Analytics off"); }
         const db = getFirestore(app);
 
         window.db = db;
-        window.fs = { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, query, orderBy, addDoc, serverTimestamp };
+        window.fs = { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, query, orderBy, addDoc, serverTimestamp, arrayUnion, deleteField, getDoc };
     </script>
 </head>
 <body class="text-gray-800 antialiased">
 
     <!-- Header / Navbar -->
-    <header class="bg-emerald-700 text-white shadow-md sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-            <div class="flex items-center space-x-3 space-x-reverse">
-                <div class="bg-white text-emerald-700 p-2 rounded-full w-10 h-10 flex items-center justify-center font-bold text-xl shadow">
-                    ব
-                </div>
-                <div>
-                    <h1 class="text-xl font-bold leading-tight">বাঞ্ছারামপুর পৌরসভা</h1>
-                    <p class="text-xs text-emerald-100">টাস্ক ম্যানেজমেন্ট ও ফলোআপ সিস্টেম</p>
-                </div>
-            </div>
-            
-            <div id="userHeaderInfo" class="hidden flex items-center space-x-4 space-x-reverse">
-                <div class="text-right">
-                    <p id="headerUserName" class="font-semibold text-sm">ব্যবহারকারীর নাম</p>
-                    <span id="headerUserRoleBadge" class="inline-block text-[11px] bg-emerald-800 px-2 py-0.5 rounded-full text-emerald-200">
-                        কর্মচারী
-                    </span>
-                </div>
-                <button onclick="logout()" class="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-1.5 rounded transition flex items-center gap-1">
-                    <i class="fa-solid fa-right-from-bracket"></i> লগআউট
-                </button>
+    <header class="sticky top-0 z-50">
+        <div class="gov-top text-emerald-100 text-xs">
+            <div class="max-w-7xl mx-auto px-4 py-1.5 flex justify-between items-center gap-2">
+                <span><i class="fa-solid fa-landmark mr-1"></i> গণপ্রজাতন্ত্রী বাংলাদেশ সরকার | স্থানীয় সরকার বিভাগ</span>
+                <span id="topDate" class="hidden sm:inline"></span>
             </div>
         </div>
+        <div class="gov-main">
+            <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-800 text-white flex items-center justify-center shadow-md ring-2 ring-emerald-100 shrink-0"><i class="fa-solid fa-building-columns text-xl"></i></div>
+                    <div>
+                        <h1 class="text-xl md:text-2xl font-bold text-emerald-700 leading-tight">বাঞ্ছারামপুর পৌরসভা</h1>
+                        <p class="text-xs md:text-sm text-gray-500">ডিজিটাল টাস্ক ম্যানেজমেন্ট, ফলোআপ ও নাগরিক আবেদন ব্যবস্থাপনা</p>
+                    </div>
+                </div>
+                <div id="userHeaderInfo" class="hidden flex items-center gap-3">
+                    <div class="text-right leading-tight">
+                        <p id="headerUserName" class="font-semibold text-sm text-gray-800">ব্যবহারকারীর নাম</p>
+                        <span id="headerUserRoleBadge" class="inline-block text-[11px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full mt-0.5">কর্মচারী</span>
+                    </div>
+                    <button onclick="changePassword()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs px-3 py-2 rounded-lg"><i class="fa-solid fa-key"></i> <span class="hidden sm:inline">পাসওয়ার্ড</span></button>
+                    <button onclick="logout()" class="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-2 rounded-lg flex items-center gap-1"><i class="fa-solid fa-right-from-bracket"></i> <span class="hidden sm:inline">লগআউট</span></button>
+                </div>
+            </div>
+        </div>
+        <div class="gov-stripe"></div>
     </header>
 
     <!-- Main Container -->
     <main class="max-w-7xl mx-auto p-4 md:p-6">
         
         <!-- Auth Section -->
-        <div id="authSection" class="max-w-md mx-auto my-12 bg-white p-8 rounded-xl shadow-lg border border-gray-100">
-            <div class="text-center mb-6">
-                <i class="fa-solid fa-city text-5xl text-emerald-600 mb-2"></i>
-                <h2 class="text-2xl font-bold text-gray-800">সিস্টেমে প্রবেশ করুন</h2>
-                <p class="text-sm text-gray-500 mt-1">আপনার ইউজারনেম ও পাসওয়ার্ড দিয়ে লগইন করুন</p>
+        <div id="authSection" class="max-w-5xl mx-auto my-6 md:my-10 grid md:grid-cols-2 rounded-2xl overflow-hidden shadow-xl border border-emerald-100 bg-white">
+            <div class="hero relative text-white p-8 md:p-10 overflow-hidden">
+                <div class="hero-dot"></div>
+                <div class="relative">
+                    <i class="fa-solid fa-building-columns text-4xl mb-4 text-emerald-200"></i>
+                    <h2 class="text-2xl md:text-3xl font-bold leading-snug">স্বাগতম<br>পৌর ডিজিটাল সেবা কেন্দ্রে</h2>
+                    <p class="text-emerald-100 text-sm mt-3 mb-6">কাজের এসাইনমেন্ট, অগ্রগতি ফলোআপ ও নাগরিক আবেদন এক জায়গায়, স্বচ্ছ ও দ্রুত।</p>
+                    <ul class="space-y-3 text-sm">
+                        <li class="flex gap-3 items-start"><i class="fa-solid fa-list-check mt-1 text-emerald-200"></i> শাখাভিত্তিক কাজ এসাইন ও ফলোআপ</li>
+                        <li class="flex gap-3 items-start"><i class="fa-solid fa-file-lines mt-1 text-emerald-200"></i> নাগরিক আবেদন এন্ট্রি, অনুমোদন ও নিষ্পত্তি</li>
+                        <li class="flex gap-3 items-start"><i class="fa-solid fa-bolt mt-1 text-emerald-200"></i> রিয়েলটাইম আপডেট ও চ্যাট</li>
+                        <li class="flex gap-3 items-start"><i class="fa-solid fa-user-shield mt-1 text-emerald-200"></i> রোলভিত্তিক নিরাপদ প্রবেশাধিকার</li>
+                    </ul>
+                </div>
             </div>
-
-            <form id="loginForm" onsubmit="handleLogin(event)">
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">ইউজারনেম</label>
-                    <input type="text" id="loginUsername" required placeholder="উদাহরণ: admin বা karim" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-                </div>
+            <div class="p-8 md:p-10 flex flex-col justify-center">
                 <div class="mb-6">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">পাসওয়ার্ড</label>
-                    <input type="password" id="loginPassword" required placeholder="••••••••" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    <h2 class="text-2xl font-bold text-emerald-700">সিস্টেমে প্রবেশ করুন</h2>
+                    <p class="text-sm text-gray-500 mt-1">শুধু পৌরসভার অনুমোদিত কর্মচারীদের জন্য</p>
                 </div>
-                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 rounded-lg transition shadow">
-                    লগইন করুন
-                </button>
-            </form>
-            <div id="loginError" class="mt-4 text-center text-sm text-red-600 hidden"></div>
+                <form id="loginForm" onsubmit="handleLogin(event)">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1"><i class="fa-solid fa-user text-emerald-600 mr-1"></i> ইউজারনেম</label>
+                        <input type="text" id="loginUsername" required autocomplete="username" placeholder="আপনার ইউজারনেম" class="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-1"><i class="fa-solid fa-lock text-emerald-600 mr-1"></i> পাসওয়ার্ড</label>
+                        <input type="password" id="loginPassword" required autocomplete="current-password" placeholder="••••••••" class="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    </div>
+                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-lg shadow-md"><i class="fa-solid fa-right-to-bracket mr-1"></i> লগইন করুন</button>
+                </form>
+                <div id="loginError" class="mt-4 text-center text-sm text-red-600 hidden"></div>
+            </div>
         </div>
 
         <!-- Dashboard Section -->
@@ -120,6 +164,9 @@
                 <div class="flex flex-wrap gap-2">
                     <button id="tabTasksBtn" onclick="switchTab('tasks')" class="px-4 py-2 rounded-lg font-medium text-sm transition bg-emerald-600 text-white">
                         <i class="fa-solid fa-list-check mr-1"></i> কাজের তালিকা
+                    </button>
+                    <button id="tabAppsBtn" onclick="switchTab('apps')" class="px-4 py-2 rounded-lg font-medium text-sm transition text-gray-600 hover:bg-gray-100">
+                        <i class="fa-solid fa-file-lines mr-1"></i> নাগরিক আবেদন <span id="appsPendingBadge" class="hidden ml-1 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full"></span>
                     </button>
                     <button id="tabStaffBtn" onclick="switchTab('staff')" class="hidden px-4 py-2 rounded-lg font-medium text-sm transition text-gray-600 hover:bg-gray-100">
                         <i class="fa-solid fa-users mr-1"></i> স্টাফ ও প্রোফাইল ব্যবস্থাপনা
@@ -164,6 +211,12 @@
                             </select>
                         </div>
 
+                        <div id="taskStats" class="grid grid-cols-2 md:grid-cols-5 gap-2 text-center text-xs"></div>
+                        <div class="flex gap-2">
+                            <input type="text" id="filterSearch" oninput="renderTasks()" placeholder="কাজ, কর্মী বা শাখা খুঁজুন..." class="flex-1 text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <button id="viewTableBtn" onclick="setView('table')" class="px-3 py-2 rounded-lg text-sm border"><i class="fa-solid fa-table-list"></i> তালিকা</button>
+                            <button id="viewCardBtn" onclick="setView('card')" class="px-3 py-2 rounded-lg text-sm border"><i class="fa-solid fa-table-cells-large"></i> কার্ড</button>
+                        </div>
                         <!-- Task Cards Grid -->
                         <div id="taskListGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <!-- Dynamic task cards -->
@@ -187,7 +240,7 @@
 
                         <!-- Send Chat Message Form -->
                         <form onsubmit="handleSendPublicMessage(event)" class="flex gap-2 pt-2 border-t">
-                            <input type="text" id="publicChatInput" required placeholder="আপনার মন্তব্য বা বার্তা লিখুন..." class="flex-1 border px-3 py-2 text-sm rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            <input type="text" id="publicChatInput" required maxlength="500" placeholder="আপনার মন্তব্য বা বার্তা লিখুন..." class="flex-1 border px-3 py-2 text-sm rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                             <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 text-sm rounded-lg font-medium transition shadow flex items-center justify-center">
                                 <i class="fa-solid fa-paper-plane"></i>
                             </button>
@@ -198,6 +251,22 @@
             </div>
 
             <!-- TAB 2: Staff & Role Management (Only for Mayor / Admin) -->
+            <div id="appsTabView" class="hidden space-y-4">
+                <div class="bg-white p-4 rounded-xl border shadow-sm space-y-3">
+                    <div class="flex flex-wrap gap-2 items-center justify-between">
+                        <h3 class="font-bold text-gray-800"><i class="fa-solid fa-file-lines text-emerald-600 mr-1"></i> নাগরিক আবেদনসমূহ</h3>
+                        <button onclick="openAppForm()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-4 py-2 rounded-lg"><i class="fa-solid fa-plus mr-1"></i> নতুন আবেদন এন্ট্রি</button>
+                    </div>
+                    <div id="appStats" class="grid grid-cols-2 md:grid-cols-5 gap-2 text-center text-xs"></div>
+                    <div class="flex flex-wrap gap-2">
+                        <select id="appFilterStatus" onchange="renderApps()" class="text-sm border rounded-lg px-3 py-1.5"><option value="ALL">সকল অবস্থা</option><option>অপেক্ষমাণ</option><option>অনুমোদিত</option><option>নিষ্পত্তি</option><option>প্রত্যাখ্যাত</option></select>
+                        <select id="appFilterCat" onchange="renderApps()" class="text-sm border rounded-lg px-3 py-1.5"><option value="ALL">সকল ক্যাটাগরি</option></select>
+                        <input id="appSearch" oninput="renderApps()" placeholder="নাম, মোবাইল, বিষয় বা ট্র্যাকিং নং..." class="flex-1 min-w-[180px] text-sm border rounded-lg px-3 py-1.5">
+                    </div>
+                    <div id="appListBox" class="overflow-x-auto custom-scrollbar"></div>
+                </div>
+            </div>
+
             <div id="staffTabView" class="hidden space-y-6">
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     
@@ -268,6 +337,16 @@
 
         </div>
     </main>
+
+    <footer class="mt-10 text-emerald-100 text-sm">
+        <div class="gov-stripe"></div>
+        <div class="gov-top">
+            <div class="max-w-7xl mx-auto px-4 py-5 flex flex-col md:flex-row justify-between items-center gap-2 text-center">
+                <p><i class="fa-solid fa-landmark mr-1"></i> বাঞ্ছারামপুর পৌরসভা, ব্রাহ্মণবাড়িয়া | গণপ্রজাতন্ত্রী বাংলাদেশ সরকার</p>
+                <p class="text-xs text-emerald-300">© সর্বস্বত্ব সংরক্ষিত। শুধুমাত্র সরকারি কাজে ব্যবহার্য।</p>
+            </div>
+        </div>
+    </footer>
 
     <!-- Modal: Assign Task -->
     <div id="taskModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden p-4">
@@ -395,12 +474,17 @@
         </div>
     </div>
 
+    <script>
+        (function () {
+            const el = document.getElementById('topDate');
+            if (el) el.textContent = new Date().toLocaleDateString('bn-BD', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        })();
+    </script>
     <!-- JavaScript Application Logic -->
     <script>
         const DEFAULT_ADMIN = {
             id: 'admin',
             username: 'admin',
-            password: '123',
             name: 'পৌর মেয়র / সুপার এডমিন',
             branch: 'সাধারণ প্রশাসন',
             role: 'Super Admin'
@@ -410,6 +494,33 @@
         let allTasks = [];
         let allStaff = [];
         let currentViewingTaskId = null;
+        let sessionId = null;
+        let staffLoaded = false;
+        let seeding = false;
+        let chatCache = null, chatSeen = 0;
+        let viewMode = 'table';
+        try { viewMode = localStorage.getItem('bp_view') || 'table'; } catch (e) {}
+
+        function setView(m) {
+            viewMode = m;
+            try { localStorage.setItem('bp_view', m); } catch (e) {}
+            renderTasks();
+        }
+
+        const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+        async function hashPw(user, pass) {
+            if (!window.crypto || !crypto.subtle) return null;
+            const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('bp|' + user + '|' + pass));
+            return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        function todayStr() {
+            const d = new Date();
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        }
+
+        function isOverdue(t) { return t.status !== 'সম্পন্ন' && t.deadline && t.deadline < todayStr(); }
 
         const STATUS_PRIORITY = {
             'নতুন': 1,
@@ -424,84 +535,111 @@
         });
 
         function initFirebaseListener() {
-            if (!window.db) {
-                setTimeout(initFirebaseListener, 500);
-                return;
-            }
-
+            if (!window.db) { setTimeout(initFirebaseListener, 500); return; }
             const { collection, onSnapshot, query, orderBy } = window.fs;
 
-            // 1. Staff Listener
             onSnapshot(collection(window.db, "staffs"), (snapshot) => {
                 allStaff = [];
-                snapshot.forEach((doc) => {
-                    allStaff.push({ id: doc.id, ...doc.data() });
-                });
-
-                if (allStaff.length === 0) {
-                    saveStaffToCloud(DEFAULT_ADMIN);
+                snapshot.forEach((d) => allStaff.push({ id: d.id, ...d.data() }));
+                if (!snapshot.metadata.fromCache) {
+                    staffLoaded = true;
+                    if (allStaff.length === 0 && !seeding) seedAdmin();
                 }
-
+                syncCurrentUser();
                 renderStaffTable();
                 populateModalStaffDropdowns();
-            });
+            }, (err) => console.error('staffs', err));
 
-            // 2. Task Listener
             onSnapshot(collection(window.db, "tasks"), (snapshot) => {
                 allTasks = [];
-                snapshot.forEach((doc) => {
-                    allTasks.push({ id: doc.id, ...doc.data() });
-                });
+                snapshot.forEach((d) => allTasks.push({ id: d.id, ...d.data() }));
                 renderTasks();
-            });
+                refreshModal();
+            }, (err) => console.error('tasks', err));
 
-            // 3. Public Chat Messages Listener (Realtime)
             const chatQuery = query(collection(window.db, "public_chats"), orderBy("timestamp", "asc"));
             onSnapshot(chatQuery, (snapshot) => {
                 const messages = [];
-                snapshot.forEach((doc) => {
-                    messages.push({ id: doc.id, ...doc.data() });
-                });
-                renderPublicChats(messages);
+                snapshot.forEach((d) => messages.push({ id: d.id, ...d.data() }));
+                chatCache = messages;
+                renderPublicChats();
+            }, (err) => {
+                console.error('chats', err);
+                const b = document.getElementById('publicChatBox');
+                if (b) b.innerHTML = '<p class="text-xs text-red-600 text-center py-4">চ্যাট লোড হচ্ছে না। ইন্টারনেট বা Firestore অনুমতি (Rules) পরীক্ষা করুন।</p>';
             });
         }
 
-        function checkSession() {
-            const saved = localStorage.getItem('bp_user');
-            if (saved) {
-                currentUser = JSON.parse(saved);
-                showDashboard();
-            } else {
-                showAuth();
+        async function seedAdmin() {
+            seeding = true;
+            const h = await hashPw('admin', '123');
+            if (h) saveStaffToCloud({ ...DEFAULT_ADMIN, passHash: h });
+        }
+
+        function syncCurrentUser() {
+            if (!currentUser && sessionId) {
+                const f = allStaff.find(s => s.id === sessionId);
+                if (f) { currentUser = f; showDashboard(); }
+                else if (staffLoaded) { sessionId = null; localStorage.removeItem('bp_uid'); }
+            } else if (currentUser) {
+                const f = allStaff.find(s => s.id === currentUser.id);
+                if (!f) { if (staffLoaded) logout(); return; }
+                const changed = f.role !== currentUser.role || f.name !== currentUser.name || !!f.viewAll !== !!currentUser.viewAll;
+                currentUser = f;
+                if (changed) showDashboard();
             }
         }
 
-        function handleLogin(e) {
+        function checkSession() {
+            localStorage.removeItem('bp_user'); // old insecure session (stored password) – purge
+            sessionId = localStorage.getItem('bp_uid');
+            showAuth();
+        }
+
+        async function handleLogin(e) {
             e.preventDefault();
+            const err = document.getElementById('loginError');
             const uName = document.getElementById('loginUsername').value.trim();
-            const pass = document.getElementById('loginPassword').value.trim();
+            const pass = document.getElementById('loginPassword').value;
+            const showErr = (m) => { err.innerText = m; err.classList.remove('hidden'); };
 
-            let found = allStaff.find(s => s.username === uName && s.password === pass);
+            if (!staffLoaded) return showErr('ডাটাবেস লোড হচ্ছে, কয়েক সেকেন্ড পর আবার চেষ্টা করুন।');
+            const h = await hashPw(uName, pass);
+            if (!h) return showErr('নিরাপদ সংযোগ (https) বা localhost এ ফাইলটি চালান।');
 
-            if (!found && uName === 'admin' && pass === '123') {
-                found = DEFAULT_ADMIN;
+            let found = allStaff.find(s => s.username === uName && (s.passHash === h || (!s.passHash && s.password === pass)));
+            if (!found) return showErr('ইউজারনেম বা পাসওয়ার্ড সঠিক নয়!');
+
+            if (!found.passHash) { // migrate old plaintext password
+                window.fs.updateDoc(window.fs.doc(window.db, "staffs", found.id), { passHash: h, password: window.fs.deleteField() });
+                found = { ...found, passHash: h };
             }
+            currentUser = found;
+            sessionId = found.id;
+            localStorage.setItem('bp_uid', found.id);
+            err.classList.add('hidden');
+            document.getElementById('loginForm').reset();
+            showDashboard();
+            if (h === await hashPw('admin', '123')) alert('সতর্কতা: আপনি ডিফল্ট পাসওয়ার্ড ব্যবহার করছেন। উপরের "পাসওয়ার্ড" বাটনে চেপে এখনই পরিবর্তন করুন।');
+        }
 
-            if (found) {
-                currentUser = found;
-                localStorage.setItem('bp_user', JSON.stringify(currentUser));
-                showDashboard();
-                document.getElementById('loginError').classList.add('hidden');
-            } else {
-                const err = document.getElementById('loginError');
-                err.innerText = "ইউজারনেম বা পাসওয়ার্ড সঠিক নয়!";
-                err.classList.remove('hidden');
-            }
+        async function changePassword() {
+            const oldP = prompt('বর্তমান পাসওয়ার্ড:');
+            if (oldP === null) return;
+            const newP = prompt('নতুন পাসওয়ার্ড (কমপক্ষে ६ অক্ষর):'.replace('६', '6'));
+            if (!newP || newP.length < 6) { if (newP !== null) alert('পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।'); return; }
+            const oldH = await hashPw(currentUser.username, oldP);
+            if (oldH !== currentUser.passHash) { alert('বর্তমান পাসওয়ার্ড সঠিক নয়।'); return; }
+            const newH = await hashPw(currentUser.username, newP);
+            await window.fs.updateDoc(window.fs.doc(window.db, "staffs", currentUser.id), { passHash: newH });
+            alert('পাসওয়ার্ড পরিবর্তন হয়েছে।');
         }
 
         function logout() {
-            currentUser = null;
-            localStorage.removeItem('bp_user');
+            currentUser = null; sessionId = null;
+            localStorage.removeItem('bp_uid');
+            closeTaskModal(); closeFollowupModal();
+            if (appsUnsub) { appsUnsub(); appsUnsub = null; } allApps = [];
             showAuth();
         }
 
@@ -525,118 +663,233 @@
                 document.getElementById('tabStaffBtn').classList.add('hidden');
             }
 
-            document.getElementById('assignTaskBtn').classList.remove('hidden');
+            document.getElementById('assignTaskBtn').classList.toggle('hidden', currentUser.role === 'Employee');
+            switchTab('tasks');
+            startAppsListener();
+            const cb = document.getElementById('publicChatBox'); if (cb) cb.dataset.painted = '0';
+            requestAnimationFrame(renderPublicChats);
 
             renderTasks();
         }
 
         function switchTab(tab) {
-            const tasksView = document.getElementById('tasksTabView');
-            const staffView = document.getElementById('staffTabView');
-            const tabTasksBtn = document.getElementById('tabTasksBtn');
-            const tabStaffBtn = document.getElementById('tabStaffBtn');
-
-            if (tab === 'tasks') {
-                tasksView.classList.remove('hidden');
-                staffView.classList.add('hidden');
-                tabTasksBtn.className = "px-4 py-2 rounded-lg font-medium text-sm transition bg-emerald-600 text-white";
-                tabStaffBtn.className = "px-4 py-2 rounded-lg font-medium text-sm transition text-gray-600 hover:bg-gray-100";
-            } else {
-                if (currentUser.role !== 'Super Admin') {
-                    alert('মেয়র বা সুপার এডমিন ব্যতীত অন্য কেউ প্রোফাইল বা শাখা পরিচালনা করতে পারবেন না।');
-                    return;
-                }
-                tasksView.classList.add('hidden');
-                staffView.classList.remove('hidden');
-                tabStaffBtn.className = "px-4 py-2 rounded-lg font-medium text-sm transition bg-emerald-600 text-white";
-                tabTasksBtn.className = "px-4 py-2 rounded-lg font-medium text-sm transition text-gray-600 hover:bg-gray-100";
+            if (tab === 'staff' && currentUser.role !== 'Super Admin') {
+                alert('মেয়র বা সুপার এডমিন ব্যতীত অন্য কেউ প্রোফাইল বা শাখা পরিচালনা করতে পারবেন না।');
+                return;
             }
+            const on = "px-4 py-2 rounded-lg font-medium text-sm transition bg-emerald-600 text-white";
+            const off = "px-4 py-2 rounded-lg font-medium text-sm transition text-gray-600 hover:bg-gray-100";
+            ['tasks', 'apps', 'staff'].forEach(t => {
+                document.getElementById(t + 'TabView').classList.toggle('hidden', t !== tab);
+                const b = document.getElementById('tab' + t[0].toUpperCase() + t.slice(1) + 'Btn');
+                b.className = (t === 'staff' ? 'hidden ' : '') + (t === tab ? on : off);
+                if (t === 'staff' && currentUser.role === 'Super Admin') b.classList.remove('hidden');
+            });
+            if (tab === 'apps') renderApps();
+            if (tab === 'tasks') requestAnimationFrame(renderPublicChats);
+        }
+
+
+        // ===== নাগরিক আবেদন মডিউল =====
+        const APP_CATS = ['রাস্তা', 'ড্রেন', 'সড়কবাতি', 'আবর্জনা', 'মেরামত', 'অন্যান্য'];
+        const APP_STATUS_CLS = { 'অপেক্ষমাণ': 'bg-yellow-100 text-yellow-800', 'অনুমোদিত': 'bg-blue-100 text-blue-800', 'নিষ্পত্তি': 'bg-green-100 text-green-800', 'প্রত্যাখ্যাত': 'bg-red-100 text-red-700' };
+        let allApps = [], appsUnsub = null;
+
+        const bn2en = (v) => String(v || '').replace(/[০-৯]/g, d => '০১২৩৪৫৬৭৮৯'.indexOf(d)).replace(/[^\d]/g, '');
+        const fmtDT = (ms) => ms ? new Date(ms).toLocaleString('bn-BD', { dateStyle: 'medium', timeStyle: 'short' }) : '';
+        const isMayor = () => currentUser && currentUser.role === 'Super Admin';
+
+        function mkModal(id, inner) {
+            let m = document.getElementById(id);
+            if (!m) { m = document.createElement('div'); m.id = id; document.body.appendChild(m); }
+            m.className = 'fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4 overflow-y-auto';
+            m.innerHTML = `<div class="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[92vh] overflow-y-auto custom-scrollbar">${inner}</div>`;
+            return m;
+        }
+        function closeM(id) { const m = document.getElementById(id); if (m) m.remove(); }
+        const mHead = (t, id) => `<div class="bg-emerald-700 text-white px-5 py-3 flex justify-between items-center rounded-t-xl sticky top-0"><h3 class="font-bold">${t}</h3><button onclick="closeM('${id}')" class="text-xl leading-none">&times;</button></div>`;
+        const fld = 'w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none';
+
+        function openAppForm() {
+            if (!currentUser) return;
+            mkModal('appFormModal', mHead('নতুন আবেদন এন্ট্রি', 'appFormModal') + `
+                <form onsubmit="submitApp(event)" class="p-5 space-y-3">
+                    <div><label class="text-xs font-medium">ম্যানুয়াল আবেদনের তারিখ *</label><input type="date" id="af_date" required value="${todayStr()}" max="${todayStr()}" class="${fld}"></div>
+                    <div><label class="text-xs font-medium">আবেদনকারীর নাম *</label><input id="af_name" required maxlength="80" class="${fld}"></div>
+                    <div><label class="text-xs font-medium">মোবাইল নম্বর *</label><input id="af_mobile" required inputmode="tel" maxlength="14" placeholder="01XXXXXXXXX" class="${fld}"></div>
+                    <div><label class="text-xs font-medium">ঠিকানা (ওয়ার্ড/মহল্লা/গ্রাম) *</label><input id="af_addr" required maxlength="200" class="${fld}"></div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div><label class="text-xs font-medium">ক্যাটাগরি *</label><select id="af_cat" required class="${fld}">${APP_CATS.map(c => `<option>${c}</option>`).join('')}</select></div>
+                        <div><label class="text-xs font-medium">রেফারালকারীর নাম</label><input id="af_ref" maxlength="80" class="${fld}"></div>
+                    </div>
+                    <div><label class="text-xs font-medium">আবেদনের বিষয় *</label><input id="af_subj" required maxlength="150" class="${fld}"></div>
+                    <div><label class="text-xs font-medium">বিস্তারিত</label><textarea id="af_desc" rows="3" maxlength="1500" class="${fld}"></textarea></div>
+                    <button type="submit" id="af_btn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 rounded-lg">আবেদন এন্ট্রি করুন</button>
+                    <p class="text-[11px] text-gray-500 text-center">এন্ট্রির পর মেয়র অনুমোদন করলে আবেদনটি ফলোআপে যাবে।</p>
+                </form>`);
+        }
+
+        async function submitApp(e) {
+            e.preventDefault();
+            if (!currentUser) return;
+            const mobile = bn2en(document.getElementById('af_mobile').value);
+            if (!/^01[3-9]\d{8}$/.test(mobile)) { alert('সঠিক ১১ সংখ্যার মোবাইল নম্বর দিন (যেমন 01712345678)।'); return; }
+            const v = (id) => document.getElementById(id).value.trim();
+            const d = new Date(), p = (n) => String(n).padStart(2, '0');
+            const id = `APP-${String(d.getFullYear()).slice(2)}${p(d.getMonth() + 1)}${p(d.getDate())}-${Math.floor(1000 + Math.random() * 9000)}`;
+            const btn = document.getElementById('af_btn'); btn.disabled = true; btn.innerText = 'জমা হচ্ছে...';
+            const rec = { id, name: v('af_name'), mobile, address: v('af_addr'), category: v('af_cat'), referrer: v('af_ref'), subject: v('af_subj'), details: v('af_desc'),
+                status: 'অপেক্ষমাণ', created: Date.now(), createdBy: currentUser.name, receivedDate: v('af_date'), notes: [] };
+            try {
+                await window.fs.setDoc(window.fs.doc(window.db, 'applications', id), rec);
+                mkModal('appFormModal', mHead('আবেদন এন্ট্রি হয়েছে', 'appFormModal') + `<div class="p-6 text-center space-y-3">
+                    <i class="fa-solid fa-circle-check text-5xl text-emerald-600"></i>
+                    <p class="text-sm text-gray-600">আবেদনের ট্র্যাকিং নম্বর:</p>
+                    <p class="text-2xl font-bold tracking-wider text-emerald-700 select-all">${esc(id)}</p>
+                    <p class="text-xs text-gray-500">নম্বরটি কাগজের আবেদনের উপর লিখে রাখুন, ফলোআপে এটি দিয়ে খুঁজে পাবেন।</p>
+                    <button onclick="closeM('appFormModal')" class="bg-emerald-600 text-white px-6 py-2 rounded-lg">ঠিক আছে</button></div>`);
+            } catch (err) { alert('আবেদন জমা দেওয়া যায়নি। ইন্টারনেট দেখে আবার চেষ্টা করুন।'); btn.disabled = false; btn.innerText = 'আবেদন এন্ট্রি করুন'; }
+        }
+
+        function startAppsListener() {
+            if (appsUnsub || !window.db) return;
+            const { collection, onSnapshot } = window.fs;
+            appsUnsub = onSnapshot(collection(window.db, 'applications'), (snap) => {
+                allApps = []; snap.forEach(d => allApps.push({ ...d.data(), id: d.id }));
+                allApps.sort((a, b) => (b.created || 0) - (a.created || 0));
+                const pend = allApps.filter(a => a.status === 'অপেক্ষমাণ').length;
+                const bd = document.getElementById('appsPendingBadge');
+                bd.innerText = pend; bd.classList.toggle('hidden', !(pend && isMayor()));
+                renderApps(); if (document.getElementById('appDetailModal')) openAppDetail(currentAppId, true);
+            }, (err) => console.error('applications', err));
+        }
+
+        function renderApps() {
+            const box = document.getElementById('appListBox'); if (!box || !currentUser) return;
+            const cat = document.getElementById('appFilterCat');
+            if (cat.options.length === 1) APP_CATS.forEach(c => cat.add(new Option(c, c)));
+            const st = document.getElementById('appFilterStatus').value, ct = cat.value, q = document.getElementById('appSearch').value.trim().toLowerCase();
+            const n = (s) => allApps.filter(a => a.status === s).length;
+            const stat = (l, v, c) => `<div class="rounded-lg p-2 ${c}"><div class="text-lg font-bold">${v}</div>${l}</div>`;
+            document.getElementById('appStats').innerHTML = stat('মোট', allApps.length, 'bg-white border') + stat('অপেক্ষমাণ', n('অপেক্ষমাণ'), 'bg-yellow-50 text-yellow-800') + stat('অনুমোদিত (চলমান)', n('অনুমোদিত'), 'bg-blue-50 text-blue-800') + stat('নিষ্পত্তি', n('নিষ্পত্তি'), 'bg-green-50 text-green-800') + stat('প্রত্যাখ্যাত', n('প্রত্যাখ্যাত'), 'bg-red-50 text-red-700');
+            const list = allApps.filter(a => (st === 'ALL' || a.status === st) && (ct === 'ALL' || a.category === ct) &&
+                (!q || `${a.name} ${a.mobile} ${a.subject} ${a.id} ${a.address} ${a.referrer}`.toLowerCase().includes(q)));
+            if (!list.length) { box.innerHTML = '<p class="text-center text-gray-400 py-10">কোনো আবেদন পাওয়া যায়নি।</p>'; return; }
+            box.innerHTML = `<table class="w-full text-sm text-left"><thead class="bg-emerald-700 text-white text-xs"><tr><th class="p-2">ট্র্যাকিং নং</th><th class="p-2">আবেদনকারী</th><th class="p-2">মোবাইল</th><th class="p-2">ক্যাটাগরি</th><th class="p-2">বিষয়</th><th class="p-2">তারিখ</th><th class="p-2">অবস্থা</th></tr></thead><tbody>` +
+                list.map(a => `<tr class="border-b hover:bg-gray-50 cursor-pointer ${a.status === 'অপেক্ষমাণ' ? 'bg-yellow-50/50' : ''}" onclick="openAppDetail('${esc(a.id)}')">
+                    <td class="p-2 whitespace-nowrap text-xs">${esc(a.id)}</td><td class="p-2 font-semibold">${esc(a.name)}</td><td class="p-2">${esc(a.mobile)}</td><td class="p-2">${esc(a.category)}</td>
+                    <td class="p-2 min-w-[160px]">${esc(a.subject)}</td><td class="p-2 whitespace-nowrap text-xs">${esc(fmtDT(a.created))}</td>
+                    <td class="p-2"><span class="px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${APP_STATUS_CLS[a.status] || ''}">${esc(a.status)}</span></td></tr>`).join('') + '</tbody></table>';
+        }
+
+        let currentAppId = null;
+        function openAppDetail(id, silent) {
+            const a = allApps.find(x => x.id === id); if (!a) { closeM('appDetailModal'); return; }
+            currentAppId = id;
+            const row = (l, v) => `<p><b class="text-gray-600">${l}:</b> ${esc(v) || '-'}</p>`;
+            const notes = (a.notes || []).map(n => `<div class="bg-gray-50 border rounded p-2 text-xs"><div class="flex justify-between font-semibold text-gray-700"><span>${esc(n.by)}</span><span class="text-gray-400">${esc(fmtDT(n.t))}</span></div><p class="mt-0.5 break-words">${esc(n.text)}</p></div>`).join('') || '<p class="text-xs text-gray-400 italic">এখনো কোনো ফলোআপ নেই।</p>';
+            const act = !isMayor() ? '' : a.status === 'অপেক্ষমাণ'
+                ? `<button onclick="setAppStatus('অনুমোদিত')" class="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm">অনুমোদন করুন</button><button onclick="setAppStatus('প্রত্যাখ্যাত')" class="flex-1 bg-red-500 text-white py-2 rounded-lg text-sm">প্রত্যাখ্যান</button>`
+                : a.status === 'অনুমোদিত' ? `<button onclick="setAppStatus('নিষ্পত্তি')" class="flex-1 bg-green-600 text-white py-2 rounded-lg text-sm">নিষ্পত্তি করুন</button>` : '';
+            const keep = silent && document.getElementById('app_note') ? document.getElementById('app_note').value : '';
+            mkModal('appDetailModal', mHead('আবেদন: ' + esc(a.id), 'appDetailModal') + `<div class="p-5 space-y-3 text-sm">
+                <span class="px-2.5 py-1 rounded-full text-xs font-semibold ${APP_STATUS_CLS[a.status] || ''}">${esc(a.status)}</span>
+                ${row('আবেদনকারী', a.name)}${row('মোবাইল', a.mobile)}${row('ঠিকানা', a.address)}${row('ক্যাটাগরি', a.category)}${row('রেফারালকারী', a.referrer)}${row('বিষয়', a.subject)}${row('বিস্তারিত', a.details)}
+                ${a.receivedDate ? row('আবেদনের তারিখ', new Date(a.receivedDate).toLocaleDateString('bn-BD', { dateStyle: 'medium' })) : ''}
+                ${row('এন্ট্রি করেছেন', a.createdBy + ' | ' + fmtDT(a.created))}
+                ${a.approvedBy ? row('সিদ্ধান্ত', `${a.status === 'অনুমোদিত' || a.status === 'নিষ্পত্তি' ? 'অনুমোদন' : 'প্রত্যাখ্যান'}: ${a.approvedBy} | ${fmtDT(a.approvedAt)}`) : ''}
+                ${a.resolutionNote ? row(a.status === 'প্রত্যাখ্যাত' ? 'প্রত্যাখ্যানের কারণ' : 'নিষ্পত্তির বিবরণ', a.resolutionNote + (a.resolvedAt ? ' | ' + fmtDT(a.resolvedAt) : '')) : ''}
+                <div class="flex gap-2">${act}</div>
+                <div class="border-t pt-3"><h4 class="font-bold mb-2">ফলোআপ নোট</h4><div class="space-y-2 max-h-40 overflow-y-auto custom-scrollbar mb-2">${notes}</div>
+                <div class="flex gap-2"><input id="app_note" maxlength="500" placeholder="ফলোআপ আপডেট লিখুন..." class="flex-1 ${fld}"><button onclick="addAppNote()" class="bg-emerald-600 text-white px-4 rounded-lg text-sm">যোগ</button></div></div></div>`);
+            if (keep) document.getElementById('app_note').value = keep;
+        }
+
+        function addAppNote() {
+            const el = document.getElementById('app_note'), text = el.value.trim(); if (!text) return;
+            window.fs.updateDoc(window.fs.doc(window.db, 'applications', currentAppId), { notes: window.fs.arrayUnion({ by: `${currentUser.name} (${currentUser.role || 'কর্মচারী'})`, text, t: Date.now() }) })
+                .then(() => { el.value = ''; }).catch(() => alert('নোট যোগ করা যায়নি।'));
+        }
+
+        function setAppStatus(status) {
+            if (!isMayor()) { alert('কেবল মেয়র এই সিদ্ধান্ত নিতে পারবেন।'); return; }
+            const a = allApps.find(x => x.id === currentAppId); if (!a) return;
+            const upd = { status };
+            if (status === 'অনুমোদিত') { upd.approvedBy = currentUser.name; upd.approvedAt = Date.now(); }
+            else {
+                const msg = status === 'নিষ্পত্তি' ? 'নিষ্পত্তির বিবরণ লিখুন (যেমন: রাস্তা মেরামত সম্পন্ন):' : 'প্রত্যাখ্যানের কারণ লিখুন:';
+                const note = prompt(msg); if (note === null) return;
+                if (!note.trim()) { alert('বিবরণ আবশ্যক।'); return; }
+                upd.resolutionNote = note.trim();
+                if (status === 'নিষ্পত্তি') { upd.resolvedBy = currentUser.name; upd.resolvedAt = Date.now(); }
+                else { upd.approvedBy = currentUser.name; upd.approvedAt = Date.now(); }
+            }
+            window.fs.updateDoc(window.fs.doc(window.db, 'applications', currentAppId), upd).catch(() => alert('আপডেট করা যায়নি।'));
         }
 
         // --- PUBLIC CHATBOX LOGIC ---
         function handleSendPublicMessage(e) {
             e.preventDefault();
+            if (!currentUser) return;
             const input = document.getElementById('publicChatInput');
-            const message = input.value.trim();
+            const message = input.value.trim().slice(0, 500);
             if (!message) return;
-
-            const senderName = currentUser ? currentUser.name : 'সাধারণ ভিজিটর';
-            const senderRole = currentUser ? (currentUser.role || 'কর্মচারী') : 'অতিথি';
-
+            input.value = '';
             const { collection, addDoc, serverTimestamp } = window.fs;
-
             addDoc(collection(window.db, "public_chats"), {
-                senderName,
-                senderRole,
+                senderId: currentUser.id,
+                senderName: currentUser.name,
+                senderRole: currentUser.role || 'কর্মচারী',
                 message,
                 timeStr: new Date().toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' }),
                 timestamp: serverTimestamp()
-            }).then(() => {
-                input.value = '';
-            });
+            }).catch(() => { input.value = message; alert('বার্তা পাঠানো যায়নি। ইন্টারনেট বা অনুমতি পরীক্ষা করুন।'); });
         }
 
-        function renderPublicChats(messages) {
+        function renderPublicChats() {
             const chatBox = document.getElementById('publicChatBox');
-            chatBox.innerHTML = '';
-
-            if (messages.length === 0) {
-                chatBox.innerHTML = `<p class="text-xs text-gray-400 text-center py-4">এখনো কোনো উন্মুক্ত বার্তা নেই। আপনার মন্তব্যটি প্রথম লিখুন!</p>`;
+            if (!chatBox || chatCache === null) return;
+            const wasNearBottom = chatBox.scrollHeight - chatBox.scrollTop - chatBox.clientHeight < 80;
+            const firstPaint = chatBox.dataset.painted !== '1';
+            const msgs = chatCache.slice(-100);
+            if (!msgs.length) {
+                chatBox.innerHTML = '<p class="text-xs text-gray-400 text-center py-4">এখনো কোনো বার্তা নেই। প্রথম বার্তা লিখুন!</p>';
                 return;
             }
-
-            messages.forEach(msg => {
-                const isMe = currentUser && currentUser.name === msg.senderName;
-                const msgDiv = document.createElement('div');
-                msgDiv.className = `p-2.5 rounded-lg border text-xs shadow-sm ${isMe ? 'bg-emerald-50 border-emerald-200 ml-4' : 'bg-white border-gray-200 mr-4'}`;
-
-                msgDiv.innerHTML = `
+            chatBox.innerHTML = msgs.map(msg => {
+                const isMe = currentUser && (msg.senderId ? msg.senderId === currentUser.id : msg.senderName === currentUser.name);
+                return `<div class="p-2.5 rounded-lg border text-xs shadow-sm ${isMe ? 'bg-emerald-50 border-emerald-200 ml-4' : 'bg-white border-gray-200 mr-4'}">
                     <div class="flex justify-between items-center mb-1">
-                        <span class="font-bold ${isMe ? 'text-emerald-800' : 'text-gray-800'}">
-                            ${msg.senderName} <span class="text-[10px] text-gray-500 font-normal">(${msg.senderRole})</span>
-                        </span>
-                        <span class="text-[10px] text-gray-400">${msg.timeStr || ''}</span>
+                        <span class="font-bold ${isMe ? 'text-emerald-800' : 'text-gray-800'}">${esc(msg.senderName)} <span class="text-[10px] text-gray-500 font-normal">(${esc(msg.senderRole)})</span></span>
+                        <span class="text-[10px] text-gray-400">${esc(msg.timeStr)}</span>
                     </div>
-                    <p class="text-gray-700 leading-relaxed">${msg.message}</p>
-                `;
-                chatBox.appendChild(msgDiv);
-            });
-
-            // Auto scroll to bottom
-            chatBox.scrollTop = chatBox.scrollHeight;
+                    <p class="text-gray-700 leading-relaxed break-words">${esc(msg.message)}</p></div>`;
+            }).join('');
+            const last = msgs[msgs.length - 1];
+            const mine = currentUser && last && last.senderId === currentUser.id;
+            if (firstPaint || wasNearBottom || mine) requestAnimationFrame(() => { chatBox.scrollTop = chatBox.scrollHeight; });
+            if (chatBox.clientHeight > 0) chatBox.dataset.painted = '1';
         }
 
         // --- STAFF & TASKS MANAGEMENT LOGIC ---
-        function handleCreateStaff(e) {
+        async function handleCreateStaff(e) {
             e.preventDefault();
-
-            if (currentUser.role !== 'Super Admin') {
-                alert('কেবল মেয়র আইডি দিয়ে নতুন প্রোফাইল তৈরি করা সম্ভব।');
-                return;
-            }
-
+            const form = e.target;
+            if (currentUser.role !== 'Super Admin') { alert('কেবল মেয়র আইডি দিয়ে নতুন প্রোফাইল তৈরি করা সম্ভব।'); return; }
             const name = document.getElementById('staffFullName').value.trim();
             const username = document.getElementById('staffUsername').value.trim();
-            const password = document.getElementById('staffPassword').value.trim();
+            const password = document.getElementById('staffPassword').value;
             const branch = document.getElementById('staffBranch').value;
-
-            if (allStaff.some(s => s.username === username)) {
-                alert('এই ইউজারনেমটি আগে থেকেই রয়েছে! অন্য ইউজারনেম ব্যবহার করুন।');
-                return;
+            if (password.length < 6) { alert('পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।'); return; }
+            if (allStaff.some(s => s.username.toLowerCase() === username.toLowerCase())) {
+                alert('এই ইউজারনেমটি আগে থেকেই রয়েছে! অন্য ইউজারনেম ব্যবহার করুন।'); return;
             }
-
-            const newStaff = {
-                id: 'staff_' + Date.now(),
-                name,
-                username,
-                password,
-                branch,
-                role: 'Employee'
-            };
-
-            saveStaffToCloud(newStaff);
-            e.target.reset();
-            alert('নতুন স্টাফ সফলভাবে নিবন্ধিত হয়েছে!');
+            if (allStaff.some(s => s.name === name)) { alert('এই নামে আরেকজন স্টাফ আছে। নামের সাথে পদবি/শাখা যোগ করে আলাদা করুন।'); return; }
+            const passHash = await hashPw(username, password);
+            if (!passHash) { alert('নিরাপদ সংযোগ (https) বা localhost এ চালান।'); return; }
+            saveStaffToCloud({ id: 'staff_' + Date.now(), name, username, passHash, branch, role: 'Employee' });
+            form.reset();
+            alert('নতুন স্টাফ সফলভাবে নিবন্ধিত হয়েছে!');
         }
 
         function saveStaffToCloud(staffObj) {
@@ -649,12 +902,22 @@
                 alert('মেয়র আইডি ব্যতীত রোল পরিবর্তন করা সম্ভব নয়।');
                 return;
             }
+            const target = allStaff.find(x => x.id === staffId);
+            if (target && target.role === 'Super Admin' && newRole !== 'Super Admin' && allStaff.filter(x => x.role === 'Super Admin').length < 2) {
+                alert('At least one Super Admin is required.'); renderStaffTable(); return;
+            }
             const { doc, updateDoc } = window.fs;
             updateDoc(doc(window.db, "staffs", staffId), {
                 role: newRole
             }).then(() => {
                 alert('স্টাফের ভূমিকা/রোল সফলভাবে আপডেট করা হয়েছে।');
             });
+        }
+
+        function toggleViewAll(staffId, allowed) {
+            if (currentUser.role !== 'Super Admin') { alert('কেবল সুপার এডমিন এই অনুমতি দিতে পারবেন।'); renderStaffTable(); return; }
+            window.fs.updateDoc(window.fs.doc(window.db, "staffs", staffId), { viewAll: allowed })
+                .catch(() => { alert('অনুমতি আপডেট করা যায়নি।'); renderStaffTable(); });
         }
 
         function renderStaffTable() {
@@ -666,15 +929,19 @@
                 tr.className = "border-b hover:bg-gray-50";
 
                 tr.innerHTML = `
-                    <td class="p-3 font-medium text-gray-800">${s.name}</td>
-                    <td class="p-3 text-gray-600">${s.username}</td>
-                    <td class="p-3 text-gray-600">${s.branch || '-'}</td>
+                    <td class="p-3 font-medium text-gray-800">${esc(s.name)}</td>
+                    <td class="p-3 text-gray-600">${esc(s.username)}</td>
+                    <td class="p-3 text-gray-600">${esc(s.branch) || '-'}</td>
                     <td class="p-3">
                         <select onchange="updateUserRole('${s.id}', this.value)" class="border rounded px-2 py-1 text-xs font-semibold ${getRoleBadgeClass(s.role)}">
                             <option value="Employee" ${s.role === 'Employee' ? 'selected' : ''}>কর্মচারী (Employee)</option>
                             <option value="Supervisor" ${s.role === 'Supervisor' ? 'selected' : ''}>তদারককারী (Supervisor)</option>
                             <option value="Super Admin" ${s.role === 'Super Admin' ? 'selected' : ''}>মেয়র / সুপার এডমিন (Super Admin)</option>
                         </select>
+                        <label class="flex items-center gap-1 mt-1.5 text-[11px] text-gray-600 cursor-pointer">
+                            <input type="checkbox" ${s.viewAll || s.role === 'Super Admin' ? 'checked' : ''} ${s.role === 'Super Admin' ? 'disabled' : ''} onchange="toggleViewAll('${esc(s.id)}', this.checked)">
+                            সকল কাজ দেখার অনুমতি
+                        </label>
                     </td>
                     <td class="p-3 text-center">
                         <button onclick="deleteStaff('${s.id}')" class="text-red-500 hover:text-red-700 text-xs px-2 py-1 rounded border border-red-200">
@@ -697,6 +964,11 @@
                 alert('মেয়র আইডি ব্যতীত কোনো প্রোফাইল ডিলিট করা সম্ভব নয়।');
                 return;
             }
+            const target = allStaff.find(x => x.id === id);
+            if (id === currentUser.id) { alert('You cannot delete your own profile.'); return; }
+            if (target && target.role === 'Super Admin' && allStaff.filter(x => x.role === 'Super Admin').length < 2) {
+                alert('The last Super Admin cannot be deleted.'); return;
+            }
             if (confirm('আপনি কি সত্যিই এই স্টাফ প্রোফাইলটি মুছে ফেলতে চান?')) {
                 const { doc, deleteDoc } = window.fs;
                 deleteDoc(doc(window.db, "staffs", id));
@@ -707,6 +979,7 @@
             const supSelect = document.getElementById('taskSupervisors');
             const empSelect = document.getElementById('taskEmployee');
 
+            const prevSup = Array.from(supSelect.selectedOptions).map(o => o.value), prevEmp = empSelect.value;
             supSelect.innerHTML = '';
             empSelect.innerHTML = '<option value="">-- কর্মী নির্বাচন করুন --</option>';
 
@@ -721,6 +994,8 @@
                 opt2.innerText = `${s.name} (${s.branch}) - ${s.role || 'কর্মচারী'}`;
                 empSelect.appendChild(opt2);
             });
+            Array.from(supSelect.options).forEach(o => { o.selected = prevSup.includes(o.value); });
+            empSelect.value = prevEmp;
         }
 
         function openTaskModal() {
@@ -734,6 +1009,7 @@
 
         function handleCreateTask(e) {
             e.preventDefault();
+            const form = e.target;
 
             const title = document.getElementById('taskTitle').value.trim();
             const branch = document.getElementById('taskBranch').value;
@@ -746,8 +1022,10 @@
             const deadline = document.getElementById('taskDeadline').value;
             const description = document.getElementById('taskDescription').value.trim();
 
+            if (!employee) { alert('একজন কর্মী নির্বাচন করুন।'); return; }
             const newTask = {
                 id: 'task_' + Date.now(),
+                createdBy: currentUser.name,
                 title,
                 branch,
                 priority,
@@ -763,86 +1041,127 @@
             const { doc, setDoc } = window.fs;
             setDoc(doc(window.db, "tasks", newTask.id), newTask).then(() => {
                 closeTaskModal();
-                e.target.reset();
+                form.reset();
                 alert('কাজটি সফলভাবে এসাইন করা হয়েছে!');
             });
         }
 
         function renderTasks() {
+            if (!currentUser) return;
             const grid = document.getElementById('taskListGrid');
             grid.innerHTML = '';
-
             const branchFilter = document.getElementById('filterBranch').value;
             const statusFilter = document.getElementById('filterStatus').value;
+            const q = document.getElementById('filterSearch').value.trim().toLowerCase();
 
-            let filtered = allTasks.filter(t => {
+            const visible = allTasks.filter(t => {
+                if (currentUser.role === 'Super Admin' || currentUser.viewAll) return true;
+                const sup = Array.isArray(t.supervisors) ? t.supervisors : [t.supervisor];
+                if (currentUser.role === 'Supervisor') return sup.includes(currentUser.name) || t.assignedTo === currentUser.name;
+                return t.assignedTo === currentUser.name;
+            });
+
+            const cnt = (f) => visible.filter(f).length;
+            const stat = (label, n, cls) => `<div class="rounded-lg p-2 ${cls}"><div class="text-lg font-bold">${n}</div>${label}</div>`;
+            document.getElementById('taskStats').innerHTML =
+                stat('মোট', visible.length, 'bg-white border') + stat('নতুন', cnt(t => t.status === 'নতুন'), 'bg-blue-50 text-blue-800') +
+                stat('চলমান', cnt(t => t.status === 'চলমান'), 'bg-yellow-50 text-yellow-800') +
+                stat('সম্পন্ন', cnt(t => t.status === 'সম্পন্ন'), 'bg-green-50 text-green-800') +
+                stat('সময়োত্তীর্ণ', cnt(isOverdue), 'bg-red-50 text-red-700');
+
+            const filtered = visible.filter(t => {
                 if (branchFilter !== 'ALL' && t.branch !== branchFilter) return false;
                 if (statusFilter !== 'ALL' && t.status !== statusFilter) return false;
-
-                if (currentUser.role === 'Super Admin') {
-                    return true;
-                }
-
-                const supervisorsList = Array.isArray(t.supervisors) ? t.supervisors : [t.supervisor];
-
-                if (currentUser.role === 'Supervisor') {
-                    return supervisorsList.includes(currentUser.name) || t.assignedTo === currentUser.name;
-                }
-
-                if (currentUser.role === 'Employee') {
-                    return t.assignedTo === currentUser.name;
-                }
-
+                if (q && !`${t.title} ${t.assignedTo} ${t.branch} ${t.description || ''}`.toLowerCase().includes(q)) return false;
                 return true;
-            });
-
-            filtered.sort((a, b) => {
-                const priorityA = STATUS_PRIORITY[a.status] || 99;
-                const priorityB = STATUS_PRIORITY[b.status] || 99;
-                return priorityA - priorityB;
-            });
+            }).sort((a, b) => (STATUS_PRIORITY[a.status] || 99) - (STATUS_PRIORITY[b.status] || 99) || String(a.deadline).localeCompare(String(b.deadline)));
 
             if (filtered.length === 0) {
-                grid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-400 bg-white rounded-xl border">কোনো কাজ পাওয়া যায়নি।</div>`;
+                grid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-400 bg-white rounded-xl border">কোনো কাজ পাওয়া যায়নি।</div>`;
                 return;
             }
 
+            const on = 'bg-emerald-600 text-white border-emerald-600', off = 'bg-white text-gray-600 hover:bg-gray-100';
+            document.getElementById('viewTableBtn').className = 'px-3 py-2 rounded-lg text-sm border ' + (viewMode === 'table' ? on : off);
+            document.getElementById('viewCardBtn').className = 'px-3 py-2 rounded-lg text-sm border ' + (viewMode === 'card' ? on : off);
+            if (viewMode === 'table') { renderTaskTable(filtered); return; }
+
             filtered.forEach(task => {
                 const card = document.createElement('div');
-                card.className = "bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between";
-
-                const supervisorsText = Array.isArray(task.supervisors) ? task.supervisors.join(', ') : (task.supervisor || 'নির্ধারিত নয়');
-
+                const late = isOverdue(task);
+                card.className = `bg-white rounded-xl border ${late ? 'border-red-300' : 'border-gray-200'} p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between`;
+                const supervisorsText = Array.isArray(task.supervisors) ? task.supervisors.join(', ') : (task.supervisor || 'নির্ধারিত নয়');
                 card.innerHTML = `
                     <div>
                         <div class="flex justify-between items-start mb-2">
-                            <span class="text-xs px-2.5 py-1 rounded-full font-semibold ${getStatusBadgeClass(task.status)}">
-                                ${task.status}
-                            </span>
-                            <span class="text-xs font-semibold px-2 py-0.5 rounded ${getPriorityBadgeClass(task.priority)}">
-                                ${task.priority}
-                            </span>
+                            <span class="text-xs px-2.5 py-1 rounded-full font-semibold ${getStatusBadgeClass(task.status)}">${esc(task.status)}</span>
+                            <span class="text-xs font-semibold px-2 py-0.5 rounded ${getPriorityBadgeClass(task.priority)}">${esc(task.priority)}</span>
                         </div>
-                        <h4 class="font-bold text-gray-800 text-base mb-2 cursor-pointer hover:text-emerald-600" onclick="openFollowupModal('${task.id}')">
-                            ${task.title}
-                        </h4>
+                        <h4 class="font-bold text-gray-800 text-base mb-2 cursor-pointer hover:text-emerald-600" data-open="${esc(task.id)}">${esc(task.title)}</h4>
                         <div class="text-xs text-gray-500 space-y-1 mb-4">
-                            <p><i class="fa-solid fa-building text-gray-400 mr-1"></i> <strong>শাখা:</strong> ${task.branch}</p>
-                            <p><i class="fa-solid fa-user-shield text-emerald-600 mr-1"></i> <strong>তদারককারী:</strong> ${supervisorsText}</p>
-                            <p><i class="fa-solid fa-user text-blue-600 mr-1"></i> <strong>কর্মী:</strong> ${task.assignedTo}</p>
-                            <p><i class="fa-solid fa-calendar-day text-red-400 mr-1"></i> <strong>ডেডলাইন:</strong> ${task.deadline}</p>
+                            <p><i class="fa-solid fa-building text-gray-400 mr-1"></i> <strong>শাখা:</strong> ${esc(task.branch)}</p>
+                            <p><i class="fa-solid fa-user-shield text-emerald-600 mr-1"></i> <strong>তদারককারী:</strong> ${esc(supervisorsText)}</p>
+                            <p><i class="fa-solid fa-user text-blue-600 mr-1"></i> <strong>কর্মী:</strong> ${esc(task.assignedTo)}</p>
+                            <p class="${late ? 'text-red-600 font-semibold' : ''}"><i class="fa-solid fa-calendar-day text-red-400 mr-1"></i> <strong>ডেডলাইন:</strong> ${esc(task.deadline)} ${late ? '(সময় পেরিয়েছে)' : ''}</p>
                         </div>
                     </div>
-
                     <div class="border-t pt-3 flex justify-between items-center text-xs">
                         <span class="text-gray-400"><i class="fa-solid fa-comments"></i> ${task.comments ? task.comments.length : 0} আপডেট</span>
-                        <button onclick="openFollowupModal('${task.id}')" class="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-semibold px-3 py-1.5 rounded-lg transition">
-                            ফলোআপ ও বিস্তারিত
-                        </button>
-                    </div>
-                `;
+                        <div class="flex gap-2">
+                            ${currentUser.role === 'Super Admin' ? `<button data-del="${esc(task.id)}" class="text-red-500 border border-red-200 hover:bg-red-50 px-2 py-1.5 rounded-lg"><i class="fa-solid fa-trash"></i></button>` : ''}
+                            <button data-open="${esc(task.id)}" class="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-semibold px-3 py-1.5 rounded-lg transition">ফলোআপ ও বিস্তারিত</button>
+                        </div>
+                    </div>`;
+                card.querySelectorAll('[data-open]').forEach(el => el.onclick = () => openFollowupModal(el.dataset.open));
+                const del = card.querySelector('[data-del]');
+                if (del) del.onclick = () => deleteTask(del.dataset.del);
                 grid.appendChild(card);
             });
+        }
+
+        function renderTaskTable(list) {
+            const grid = document.getElementById('taskListGrid');
+            const isAdmin = currentUser.role === 'Super Admin';
+            const rows = list.map((t, i) => {
+                const late = isOverdue(t);
+                const sup = Array.isArray(t.supervisors) ? t.supervisors.join(', ') : (t.supervisor || 'নির্ধারিত নয়');
+                return `<tr class="border-b hover:bg-gray-50 ${late ? 'bg-red-50' : ''}">
+                    <td class="p-2 text-center text-gray-500">${i + 1}</td>
+                    <td class="p-2 font-semibold text-gray-800 min-w-[180px] cursor-pointer hover:text-emerald-600" data-open="${esc(t.id)}">${esc(t.title)}</td>
+                    <td class="p-2 text-gray-600">${esc(t.branch)}</td>
+                    <td class="p-2 text-gray-600">${esc(t.assignedTo)}</td>
+                    <td class="p-2 text-gray-600">${esc(sup)}</td>
+                    <td class="p-2 whitespace-nowrap ${late ? 'text-red-600 font-semibold' : 'text-gray-600'}">${esc(t.deadline)}${late ? ' ⚠' : ''}</td>
+                    <td class="p-2"><span class="text-xs font-semibold px-2 py-0.5 rounded ${getPriorityBadgeClass(t.priority)}">${esc(t.priority)}</span></td>
+                    <td class="p-2"><span class="text-xs px-2.5 py-1 rounded-full font-semibold whitespace-nowrap ${getStatusBadgeClass(t.status)}">${esc(t.status)}</span></td>
+                    <td class="p-2 text-center text-gray-500">${t.comments ? t.comments.length : 0}</td>
+                    <td class="p-2 whitespace-nowrap text-center">
+                        <button data-open="${esc(t.id)}" class="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-semibold px-2.5 py-1 rounded">বিস্তারিত</button>
+                        ${isAdmin ? `<button data-del="${esc(t.id)}" class="text-red-500 border border-red-200 hover:bg-red-50 text-xs px-2 py-1 rounded ml-1"><i class="fa-solid fa-trash"></i></button>` : ''}
+                    </td></tr>`;
+            }).join('');
+            grid.innerHTML = `<div class="col-span-full bg-white rounded-xl border overflow-x-auto custom-scrollbar">
+                <table class="w-full text-sm text-left">
+                    <thead class="bg-emerald-700 text-white text-xs"><tr>
+                        <th class="p-2 text-center">ক্রম</th><th class="p-2">কাজের শিরোনাম</th><th class="p-2">শাখা</th><th class="p-2">কর্মী</th>
+                        <th class="p-2">তদারককারী</th><th class="p-2">ডেডলাইন</th><th class="p-2">অগ্রাধিকার</th><th class="p-2">স্ট্যাটাস</th>
+                        <th class="p-2 text-center">আপডেট</th><th class="p-2 text-center">অ্যাকশন</th>
+                    </tr></thead><tbody>${rows}</tbody></table></div>`;
+            grid.querySelectorAll('[data-open]').forEach(el => el.onclick = () => openFollowupModal(el.dataset.open));
+            grid.querySelectorAll('[data-del]').forEach(el => el.onclick = () => deleteTask(el.dataset.del));
+        }
+
+        function deleteTask(id) {
+            if (currentUser.role !== 'Super Admin') return;
+            if (confirm('এই কাজটি স্থায়ীভাবে মুছে ফেলবেন?')) window.fs.deleteDoc(window.fs.doc(window.db, "tasks", id));
+        }
+
+        function refreshModal() {
+            if (!currentViewingTaskId) return;
+            const t = allTasks.find(x => x.id === currentViewingTaskId);
+            if (!t) { closeFollowupModal(); return; }
+            document.getElementById('updateStatusSelect').value = t.status;
+            renderComments(t.comments || []);
         }
 
         function getStatusBadgeClass(status) {
@@ -888,12 +1207,18 @@
 
         function updateTaskStatusFromModal() {
             if (!currentViewingTaskId) return;
+            const task = allTasks.find(t => t.id === currentViewingTaskId);
             const newStatus = document.getElementById('updateStatusSelect').value;
-
-            const { doc, updateDoc } = window.fs;
+            if (!task || task.status === newStatus) return;
+            const { doc, updateDoc, arrayUnion } = window.fs;
             updateDoc(doc(window.db, "tasks", currentViewingTaskId), {
-                status: newStatus
-            });
+                status: newStatus,
+                comments: arrayUnion({
+                    userName: currentUser.name, userRole: currentUser.role || 'কর্মচারী',
+                    text: `স্ট্যাটাস পরিবর্তন: ${task.status} → ${newStatus}`,
+                    time: new Date().toLocaleString('bn-BD', { dateStyle: 'short', timeStyle: 'short' })
+                })
+            }).catch(() => { alert('স্ট্যাটাস আপডেট করা যায়নি।'); refreshModal(); });
         }
 
         function renderComments(comments) {
@@ -910,10 +1235,10 @@
                 div.className = "bg-gray-50 p-2.5 rounded-lg border border-gray-100 text-xs";
                 div.innerHTML = `
                     <div class="flex justify-between font-semibold text-gray-700 mb-1">
-                        <span>${c.userName} (${c.userRole})</span>
-                        <span class="text-gray-400 text-[10px]">${c.time}</span>
+                        <span>${esc(c.userName)} (${esc(c.userRole)})</span>
+                        <span class="text-gray-400 text-[10px]">${esc(c.time)}</span>
                     </div>
-                    <p class="text-gray-600">${c.text}</p>
+                    <p class="text-gray-600 break-words">${esc(c.text)}</p>
                 `;
                 list.appendChild(div);
             });
@@ -924,29 +1249,18 @@
         function handleAddComment(e) {
             e.preventDefault();
             if (!currentViewingTaskId) return;
-
             const input = document.getElementById('newCommentText');
-            const text = input.value.trim();
+            const text = input.value.trim().slice(0, 1000);
             if (!text) return;
-
-            const task = allTasks.find(t => t.id === currentViewingTaskId);
-            const comments = task.comments || [];
-
-            const newComment = {
-                userName: currentUser.name,
-                userRole: currentUser.role || 'কর্মচারী',
-                text,
-                time: new Date().toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' })
-            };
-
-            comments.push(newComment);
-
-            const { doc, updateDoc } = window.fs;
-            updateDoc(doc(window.db, "tasks", currentViewingTaskId), { comments }).then(() => {
-                input.value = '';
-                renderComments(comments);
-            });
+            const { doc, updateDoc, arrayUnion } = window.fs;
+            updateDoc(doc(window.db, "tasks", currentViewingTaskId), {
+                comments: arrayUnion({
+                    userName: currentUser.name, userRole: currentUser.role || 'কর্মচারী', text,
+                    time: new Date().toLocaleString('bn-BD', { dateStyle: 'short', timeStyle: 'short' })
+                })
+            }).then(() => { input.value = ''; }).catch(() => alert('মন্তব্য পাঠানো যায়নি।'));
         }
+
     </script>
 </body>
 </html>
