@@ -32,7 +32,7 @@
         }
     </style>
 
-    <!-- Firebase SDKs with New Configuration -->
+    <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -93,7 +93,7 @@
             <div class="text-center mb-6">
                 <i class="fa-solid fa-city text-5xl text-emerald-600 mb-2"></i>
                 <h2 class="text-2xl font-bold text-gray-800">সিস্টেমে প্রবেশ করুন</h2>
-                <p class="text-sm text-gray-500 mt-1">বাঞ্ছারামপুর পৌরসভা ডিজিটাল পোর্টালে আপনার ইউজারনেম দিয়ে লগইন করুন</p>
+                <p class="text-sm text-gray-500 mt-1">আপনার ইউজারনেম ও পাসওয়ার্ড দিয়ে লগইন করুন</p>
             </div>
 
             <form id="loginForm" onsubmit="handleLogin(event)">
@@ -121,14 +121,14 @@
                     <button id="tabTasksBtn" onclick="switchTab('tasks')" class="px-4 py-2 rounded-lg font-medium text-sm transition bg-emerald-600 text-white">
                         <i class="fa-solid fa-list-check mr-1"></i> কাজের তালিকা
                     </button>
-                    <!-- শুধুমাত্র মেয়রের (Super Admin) জন্য দৃশ্যমান হবে -->
+                    <!-- মেয়র/এডমিন ব্যতীত অন্য কারও কাছে নিচের ট্যাবটি দৃশ্যমান হবে না -->
                     <button id="tabStaffBtn" onclick="switchTab('staff')" class="hidden px-4 py-2 rounded-lg font-medium text-sm transition text-gray-600 hover:bg-gray-100">
-                        <i class="fa-solid fa-users mr-1"></i> স্টাফ ও শাখা ব্যবস্থাপনা
+                        <i class="fa-solid fa-users mr-1"></i> স্টাফ ও প্রোফাইল ব্যবস্থাপনা
                     </button>
                 </div>
 
                 <div class="flex gap-2 w-full md:w-auto justify-end">
-                    <!-- যেকোনো ব্যবহাকারী কাজ এসাইন করতে পারবেন -->
+                    <!-- নতুন কাজ এসাইন বাটন -->
                     <button id="assignTaskBtn" onclick="openTaskModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-4 py-2 rounded-lg transition shadow flex items-center gap-2">
                         <i class="fa-solid fa-plus"></i> নতুন কাজ এসাইন করুন
                     </button>
@@ -167,16 +167,16 @@
                 </div>
             </div>
 
-            <!-- TAB 2: Staff & Role Management (Super Admin / Mayor only) -->
+            <!-- TAB 2: Staff & Role Management (Only for Mayor / Admin) -->
             <div id="staffTabView" class="hidden space-y-6">
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     
-                    <!-- Registration Form -->
+                    <!-- Registration Form (Only Mayor can register) -->
                     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 h-fit">
                         <h3 class="text-lg font-bold text-gray-800 mb-2 border-b pb-2">
                             <i class="fa-solid fa-user-plus text-emerald-600 mr-1"></i> নতুন স্টাফ রেজিস্টার
                         </h3>
-                        <p class="text-xs text-gray-500 mb-4">নিবন্ধনের জন্য তথ্য প্রদান করুন।</p>
+                        <p class="text-xs text-gray-500 mb-4">কেবল মেয়র বা সুপার এডমিন নতুন প্রোফাইল তৈরি ও শাখা নির্ধারণ করতে পারবেন।</p>
                         
                         <form onsubmit="handleCreateStaff(event)" class="space-y-4">
                             <div>
@@ -204,7 +204,7 @@
                                 </select>
                             </div>
                             <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium py-2 rounded-lg transition">
-                                স্টাফ যুক্ত করুন
+                                স্টাফ প্রোফাইল তৈরি করুন
                             </button>
                         </form>
                     </div>
@@ -276,12 +276,15 @@
                     </div>
                 </div>
 
-                <!-- Select Supervisor -->
+                <!-- Multiple Supervisors Selection -->
                 <div>
-                    <label class="block font-semibold text-gray-700 mb-1"><i class="fa-solid fa-user-shield text-emerald-600 mr-1"></i>সুপারভাইজার / তদারককারী নির্বাচন করুন</label>
-                    <select id="taskSupervisor" class="w-full border px-3 py-2 rounded-lg">
-                        <option value="">-- যেকোনো একজন নির্ধারণ করুন --</option>
+                    <label class="block font-semibold text-gray-700 mb-1">
+                        <i class="fa-solid fa-user-shield text-emerald-600 mr-1"></i>সুপারভাইজার / তদারককারী (একাধিক নির্বাচন করতে Ctrl বা Cmd চেপে ক্লিক করুন)
+                    </label>
+                    <select id="taskSupervisors" multiple class="w-full border px-3 py-2 rounded-lg h-28 focus:ring-2 focus:ring-emerald-500 custom-scrollbar">
+                        <!-- Dynamic Multi Options -->
                     </select>
+                    <span class="text-[11px] text-gray-500 italic">* একের অধিক সুপারভাইজার নির্বাচন করতে কিবোর্ডের Ctrl চেপে ধরুন।</span>
                 </div>
 
                 <!-- Select Employee -->
@@ -334,9 +337,9 @@
                 </div>
 
                 <!-- Assignment details -->
-                <div class="grid grid-cols-2 gap-2 text-xs bg-emerald-50 p-3 rounded-lg border border-emerald-100">
-                    <div><strong>তদারককারী (Supervisor):</strong> <span id="modalSupervisorName">-</span></div>
-                    <div><strong>দায়িত্বপ্রাপ্ত কর্মী:</strong> <span id="modalEmployeeName">-</span></div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs bg-emerald-50 p-3 rounded-lg border border-emerald-100">
+                    <div><strong>তদারককারী (Supervisors):</strong> <span id="modalSupervisorName" class="text-emerald-800 font-medium">-</span></div>
+                    <div><strong>দায়িত্বপ্রাপ্ত কর্মী:</strong> <span id="modalEmployeeName" class="text-blue-800 font-medium">-</span></div>
                 </div>
 
                 <div>
@@ -378,6 +381,14 @@
         let allTasks = [];
         let allStaff = [];
         let currentViewingTaskId = null;
+
+        // স্ট্যাটাসের অগ্রাধিকার ক্রম (অসম্পন্ন কাজগুলোকে উপরে রাখার জন্য)
+        const STATUS_PRIORITY = {
+            'নতুন': 1,
+            'চলমান': 2,
+            'পর্যালোচনাধীন': 3,
+            'সম্পন্ন': 4
+        };
 
         window.addEventListener('DOMContentLoaded', () => {
             initFirebaseListener();
@@ -468,14 +479,13 @@
             document.getElementById('headerUserName').innerText = currentUser.name;
             document.getElementById('headerUserRoleBadge').innerText = currentUser.role || 'কর্মচারী';
 
-            // কেবল Mayor / Super Admin প্রোফাইল সৃষ্টি ও শাখা দেখার অধিকার পাবেন
+            // কেবল মেয়র / Super Admin হলেই স্টাফ এবং শাখা ব্যবস্থাপনার ট্যাবটি দেখাবে
             if (currentUser.role === 'Super Admin') {
                 document.getElementById('tabStaffBtn').classList.remove('hidden');
             } else {
                 document.getElementById('tabStaffBtn').classList.add('hidden');
             }
 
-            // সবাই কাজ এসাইন করতে পারবে
             document.getElementById('assignTaskBtn').classList.remove('hidden');
 
             renderTasks();
@@ -494,7 +504,7 @@
                 tabStaffBtn.className = "px-4 py-2 rounded-lg font-medium text-sm transition text-gray-600 hover:bg-gray-100";
             } else {
                 if (currentUser.role !== 'Super Admin') {
-                    alert('কেবলমাত্র মেয়র/সুপার এডমিন প্রোফাইল বা শাখা পরিচালনা করতে পারবেন।');
+                    alert('মেয়র বা সুপার এডমিন ব্যতীত অন্য কেউ প্রোফাইল বা শাখা পরিচালনা করতে পারবেন না।');
                     return;
                 }
                 tasksView.classList.add('hidden');
@@ -506,8 +516,9 @@
 
         function handleCreateStaff(e) {
             e.preventDefault();
+
             if (currentUser.role !== 'Super Admin') {
-                alert('শুধুমাত্র মেয়র/সুপার এডমিন নতুন প্রোফাইল তৈরি করতে পারবেন।');
+                alert('কেবল মেয়র আইডি দিয়ে নতুন প্রোফাইল তৈরি করা সম্ভব।');
                 return;
             }
 
@@ -542,7 +553,7 @@
 
         function updateUserRole(staffId, newRole) {
             if (currentUser.role !== 'Super Admin') {
-                alert('শুধুমাত্র মেয়র/সুপার এডমিন রোল পরিবর্তন করতে পারবেন।');
+                alert('মেয়র আইডি ব্যতীত রোল পরিবর্তন করা সম্ভব নয়।');
                 return;
             }
             const { doc, updateDoc } = window.fs;
@@ -569,7 +580,7 @@
                         <select onchange="updateUserRole('${s.id}', this.value)" class="border rounded px-2 py-1 text-xs font-semibold ${getRoleBadgeClass(s.role)}">
                             <option value="Employee" ${s.role === 'Employee' ? 'selected' : ''}>কর্মচারী (Employee)</option>
                             <option value="Supervisor" ${s.role === 'Supervisor' ? 'selected' : ''}>তদারককারী (Supervisor)</option>
-                            <option value="Super Admin" ${s.role === 'Super Admin' ? 'selected' : ''}>সুপার এডমিন (Super Admin)</option>
+                            <option value="Super Admin" ${s.role === 'Super Admin' ? 'selected' : ''}>মেয়র / সুপার এডমিন (Super Admin)</option>
                         </select>
                     </td>
                     <td class="p-3 text-center">
@@ -590,7 +601,7 @@
 
         function deleteStaff(id) {
             if (currentUser.role !== 'Super Admin') {
-                alert('শুধুমাত্র মেয়র/সুপার এডমিন প্রোফাইল ডিলিট করতে পারবেন।');
+                alert('মেয়র আইডি ব্যতীত কোনো প্রোফাইল ডিলিট করা সম্ভব নয়।');
                 return;
             }
             if (confirm('আপনি কি সত্যিই এই স্টাফ প্রোফাইলটি মুছে ফেলতে চান?')) {
@@ -600,18 +611,20 @@
         }
 
         function populateModalStaffDropdowns() {
-            const supSelect = document.getElementById('taskSupervisor');
+            const supSelect = document.getElementById('taskSupervisors');
             const empSelect = document.getElementById('taskEmployee');
 
-            supSelect.innerHTML = '<option value="">-- যেকোনো একজন নির্ধারণ করুন --</option>';
+            supSelect.innerHTML = '';
             empSelect.innerHTML = '<option value="">-- কর্মী নির্বাচন করুন --</option>';
 
             allStaff.forEach(s => {
+                // Multiple supervisors option list
                 const opt1 = document.createElement('option');
                 opt1.value = s.name;
                 opt1.innerText = `${s.name} (${s.branch}) - ${s.role || 'কর্মচারী'}`;
                 supSelect.appendChild(opt1);
 
+                // Assigned Employee option list
                 const opt2 = document.createElement('option');
                 opt2.value = s.name;
                 opt2.innerText = `${s.name} (${s.branch}) - ${s.role || 'কর্মচারী'}`;
@@ -634,7 +647,11 @@
             const title = document.getElementById('taskTitle').value.trim();
             const branch = document.getElementById('taskBranch').value;
             const priority = document.getElementById('taskPriority').value;
-            const supervisor = document.getElementById('taskSupervisor').value;
+            
+            // Multiple Supervisors Selection Array
+            const supervisorSelect = document.getElementById('taskSupervisors');
+            const selectedSupervisors = Array.from(supervisorSelect.selectedOptions).map(opt => opt.value);
+
             const employee = document.getElementById('taskEmployee').value;
             const deadline = document.getElementById('taskDeadline').value;
             const description = document.getElementById('taskDescription').value.trim();
@@ -644,7 +661,7 @@
                 title,
                 branch,
                 priority,
-                supervisor: supervisor || 'নির্ধারিত নয়',
+                supervisors: selectedSupervisors.length > 0 ? selectedSupervisors : ['নির্ধারিত নয়'],
                 assignedTo: employee,
                 deadline,
                 description,
@@ -672,31 +689,43 @@
                 if (branchFilter !== 'ALL' && t.branch !== branchFilter) return false;
                 if (statusFilter !== 'ALL' && t.status !== statusFilter) return false;
 
+                // রোল অনুযায়ী কাজের ফিল্টারিং
+                if (currentUser.role === 'Super Admin') {
+                    return true; // মেয়র সব কাজ দেখতে পাবেন
+                }
+
+                const supervisorsList = Array.isArray(t.supervisors) ? t.supervisors : [t.supervisor];
+
+                if (currentUser.role === 'Supervisor') {
+                    // সুপারভাইজার তার তদারকিকৃত কাজ বা তাকে অর্পিত কাজ উভয়টি দেখতে পাবেন
+                    return supervisorsList.includes(currentUser.name) || t.assignedTo === currentUser.name;
+                }
+
                 if (currentUser.role === 'Employee') {
+                    // কর্মচারী কেবল তাকে এসাইন করা কাজগুলো দেখতে পাবেন
                     return t.assignedTo === currentUser.name;
                 }
-                if (currentUser.role === 'Supervisor') {
-                    return t.supervisor === currentUser.name || t.assignedTo === currentUser.name;
-                }
+
                 return true;
             });
 
-            // অসম্পন্ন কাজগুলো (নতুন, চলমান, পর্যালোচনাধীন) আগে এবং সম্পন্ন কাজগুলো শেষে সাজানো
+            // অসম্পন্ন কাজগুলো (নতুন -> চলমান -> পর্যালোচনাধীন -> সম্পন্ন) সবার উপরে সাজানো
             filtered.sort((a, b) => {
-                if (a.status === 'সম্পন্ন' && b.status !== 'সম্পন্ন') return 1;
-                if (a.status !== 'সম্পন্ন' && b.status === 'সম্পন্ন') return -1;
-                return 0;
+                const priorityA = STATUS_PRIORITY[a.status] || 99;
+                const priorityB = STATUS_PRIORITY[b.status] || 99;
+                return priorityA - priorityB;
             });
 
             if (filtered.length === 0) {
-                grid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-400 bg-white rounded-xl border">কোনো কাজ পাওয়া যায়নি।</div>`;
+                grid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-400 bg-white rounded-xl border">আপনার জন্য বা এই ফিল্টারে কোনো কাজ পাওয়া যায়নি।</div>`;
                 return;
             }
 
             filtered.forEach(task => {
                 const card = document.createElement('div');
-                const isCompleted = task.status === 'সম্পন্ন';
-                card.className = `bg-white rounded-xl border ${isCompleted ? 'border-gray-200 bg-gray-50/50' : 'border-emerald-100'} p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between`;
+                card.className = "bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between";
+
+                const supervisorsText = Array.isArray(task.supervisors) ? task.supervisors.join(', ') : (task.supervisor || 'নির্ধারিত নয়');
 
                 card.innerHTML = `
                     <div>
@@ -708,12 +737,12 @@
                                 ${task.priority}
                             </span>
                         </div>
-                        <h4 class="font-bold text-gray-800 text-base mb-2 cursor-pointer hover:text-emerald-600 ${isCompleted ? 'line-through text-gray-500' : ''}" onclick="openFollowupModal('${task.id}')">
+                        <h4 class="font-bold text-gray-800 text-base mb-2 cursor-pointer hover:text-emerald-600" onclick="openFollowupModal('${task.id}')">
                             ${task.title}
                         </h4>
                         <div class="text-xs text-gray-500 space-y-1 mb-4">
                             <p><i class="fa-solid fa-building text-gray-400 mr-1"></i> <strong>শাখা:</strong> ${task.branch}</p>
-                            <p><i class="fa-solid fa-user-shield text-emerald-600 mr-1"></i> <strong>তদারককারী:</strong> ${task.supervisor}</p>
+                            <p><i class="fa-solid fa-user-shield text-emerald-600 mr-1"></i> <strong>তদারককারী:</strong> ${supervisorsText}</p>
                             <p><i class="fa-solid fa-user text-blue-600 mr-1"></i> <strong>কর্মী:</strong> ${task.assignedTo}</p>
                             <p><i class="fa-solid fa-calendar-day text-red-400 mr-1"></i> <strong>ডেডলাইন:</strong> ${task.deadline}</p>
                         </div>
@@ -753,9 +782,11 @@
             const task = allTasks.find(t => t.id === taskId);
             if (!task) return;
 
+            const supervisorsText = Array.isArray(task.supervisors) ? task.supervisors.join(', ') : (task.supervisor || 'নির্ধারিত নয়');
+
             document.getElementById('modalTaskTitle').innerText = task.title;
             document.getElementById('modalTaskMeta').innerText = `${task.branch} | ডেডলাইন: ${task.deadline}`;
-            document.getElementById('modalSupervisorName').innerText = task.supervisor;
+            document.getElementById('modalSupervisorName').innerText = supervisorsText;
             document.getElementById('modalEmployeeName').innerText = task.assignedTo;
             document.getElementById('modalTaskDesc').innerText = task.description || 'কোনো বিস্তারিত বিবরণ দেওয়া হয়নি।';
             document.getElementById('updateStatusSelect').value = task.status;
