@@ -64,7 +64,7 @@
     <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, query, orderBy, addDoc, serverTimestamp, arrayUnion, deleteField, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, query, orderBy, addDoc, serverTimestamp, arrayUnion, deleteField, getDoc, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
 
         const firebaseConfig = {
@@ -82,7 +82,7 @@
         const db = getFirestore(app);
 
         window.db = db;
-        window.fs = { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, query, orderBy, addDoc, serverTimestamp, arrayUnion, deleteField, getDoc };
+        window.fs = { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, query, orderBy, addDoc, serverTimestamp, arrayUnion, deleteField, getDoc, where, getDocs };
     </script>
 </head>
 <body class="text-gray-800 antialiased">
@@ -413,6 +413,13 @@
                     <textarea id="taskDescription" rows="3" placeholder="কাজের বিস্তারিত বিবরণ বা নির্দেশনা লিখুন..." class="w-full border px-3 py-2 rounded-lg"></textarea>
                 </div>
 
+                <div>
+                    <label class="block font-semibold text-gray-700 mb-1"><i class="fa-solid fa-camera text-emerald-600 mr-1"></i>ছবি সংযুক্ত করুন <span class="text-xs font-normal text-gray-400">(ঐচ্ছিক, সর্বোচ্চ ৬টি)</span></label>
+                    <input type="file" id="createPhotoInput" accept="image/*" multiple class="hidden" onchange="pickPhotos('create', this)">
+                    <button type="button" onclick="document.getElementById('createPhotoInput').click()" class="px-3 py-2 border border-dashed border-emerald-500 text-emerald-700 hover:bg-emerald-50 rounded-lg text-sm"><i class="fa-solid fa-image mr-1"></i> ছবি নির্বাচন করুন / ক্যামেরা</button>
+                    <div id="createPhotoPreview" class="flex flex-wrap gap-2 mt-2"></div>
+                </div>
+
                 <div class="flex justify-end gap-2 pt-2">
                     <button type="button" onclick="closeTaskModal()" class="px-4 py-2 border rounded-lg hover:bg-gray-100">বাতিল</button>
                     <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg">কাজ এসাইন করুন</button>
@@ -453,6 +460,7 @@
                 <div>
                     <p class="font-semibold text-gray-700">বিবরণ:</p>
                     <p id="modalTaskDesc" class="text-gray-600 bg-gray-50 p-3 rounded-lg mt-1 text-xs">বিবরণ দেওয়া হয়নি</p>
+                    <div id="modalDescPhotos" class="flex flex-wrap gap-2 mt-2"></div>
                 </div>
 
                 <!-- Followup Comments -->
@@ -465,13 +473,27 @@
                         <!-- Dynamic Comments -->
                     </div>
 
-                    <form onsubmit="handleAddComment(event)" class="flex gap-2">
-                        <input type="text" id="newCommentText" required placeholder="আপনার মতামত বা অগ্রগতির আপডেট লিখুন..." class="flex-1 border px-3 py-2 rounded-lg text-sm">
-                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium">পাঠান</button>
+                    <form onsubmit="handleAddComment(event)" class="space-y-2">
+                        <div class="flex gap-2">
+                            <input type="text" id="newCommentText" placeholder="আপনার মতামত বা অগ্রগতির আপডেট লিখুন..." class="flex-1 border px-3 py-2 rounded-lg text-sm">
+                            <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white px-4 py-2 rounded-lg text-sm font-medium">পাঠান</button>
+                        </div>
+                        <div>
+                            <input type="file" id="updatePhotoInput" accept="image/*" multiple class="hidden" onchange="pickPhotos('update', this)">
+                            <button type="button" onclick="document.getElementById('updatePhotoInput').click()" class="px-3 py-1.5 border border-dashed border-emerald-500 text-emerald-700 hover:bg-emerald-50 rounded-lg text-xs"><i class="fa-solid fa-camera mr-1"></i> অগ্রগতির ছবি যুক্ত করুন <span class="text-gray-400">(সর্বোচ্চ ৪টি)</span></button>
+                            <div id="updatePhotoPreview" class="flex flex-wrap gap-2 mt-2"></div>
+                        </div>
                     </form>
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Photo Lightbox -->
+    <div id="photoLightbox" class="fixed inset-0 bg-black/90 z-[70] flex flex-col items-center justify-center p-4 hidden" onclick="closeLightbox()">
+        <button type="button" class="absolute top-3 right-4 text-white text-4xl leading-none" onclick="closeLightbox()">&times;</button>
+        <img id="lightboxImg" alt="" class="max-w-full max-h-[85vh] rounded-lg object-contain" onclick="event.stopPropagation()">
+        <div id="lightboxCap" class="text-white text-xs mt-3 text-center"></div>
     </div>
 
     <script>
@@ -572,7 +594,7 @@
 
         async function seedAdmin() {
             seeding = true;
-            const h = await hashPw('admin', '1234');
+            const h = await hashPw('admin', '123');
             if (h) saveStaffToCloud({ ...DEFAULT_ADMIN, passHash: h });
         }
 
@@ -604,7 +626,8 @@
             const showErr = (m) => { err.innerText = m; err.classList.remove('hidden'); };
 
             if (!staffLoaded) return showErr('ডাটাবেস লোড হচ্ছে, কয়েক সেকেন্ড পর আবার চেষ্টা করুন।');
-            const h = await hashPw(uName, pass);
+            const cand = allStaff.find(s => s.username === uName);
+            const h = await hashPw(cand ? (cand.hashSalt || cand.username) : uName, pass);
             if (!h) return showErr('নিরাপদ সংযোগ (https) বা localhost এ ফাইলটি চালান।');
 
             let found = allStaff.find(s => s.username === uName && (s.passHash === h || (!s.passHash && s.password === pass)));
@@ -628,9 +651,9 @@
             if (oldP === null) return;
             const newP = prompt('নতুন পাসওয়ার্ড (কমপক্ষে ६ অক্ষর):'.replace('६', '6'));
             if (!newP || newP.length < 6) { if (newP !== null) alert('পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।'); return; }
-            const oldH = await hashPw(currentUser.username, oldP);
+            const oldH = await hashPw(currentUser.hashSalt || currentUser.username, oldP);
             if (oldH !== currentUser.passHash) { alert('বর্তমান পাসওয়ার্ড সঠিক নয়।'); return; }
-            const newH = await hashPw(currentUser.username, newP);
+            const newH = await hashPw(currentUser.hashSalt || currentUser.username, newP);
             await window.fs.updateDoc(window.fs.doc(window.db, "staffs", currentUser.id), { passHash: newH });
             alert('পাসওয়ার্ড পরিবর্তন হয়েছে।');
         }
@@ -897,6 +920,28 @@
             setDoc(doc(window.db, "staffs", staffObj.id), staffObj);
         }
 
+        async function editUsername(id) {
+            if (currentUser.role !== 'Super Admin') { alert('কেবল সুপার এডমিন ইউজারনেম পরিবর্তন করতে পারবেন।'); return; }
+            const t = allStaff.find(x => x.id === id);
+            if (!t) return;
+            const input = prompt(`"${t.name}" এর নতুন ইউজারনেম লিখুন:`, t.username);
+            if (input === null) return;
+            const nu = input.trim();
+            if (nu === t.username) return;
+            if (!/^\S{3,30}$/.test(nu)) { alert('ইউজারনেম ৩ থেকে ৩০ অক্ষরের হতে হবে এবং মাঝে ফাঁকা স্থান (space) থাকা যাবে না।'); return; }
+            if (allStaff.some(x => x.id !== id && String(x.username).toLowerCase() === nu.toLowerCase())) {
+                alert('এই ইউজারনেমটি আগে থেকেই রয়েছে! অন্য ইউজারনেম ব্যবহার করুন।'); return;
+            }
+            try {
+                // পাসওয়ার্ড হ্যাশ পুরোনো ইউজারনেম দিয়ে তৈরি, তাই সেটি hashSalt হিসেবে রাখা হচ্ছে — পাসওয়ার্ড অপরিবর্তিত থাকবে
+                await window.fs.updateDoc(window.fs.doc(window.db, "staffs", id), { username: nu, hashSalt: t.hashSalt || t.username });
+                alert('ইউজারনেম পরিবর্তন হয়েছে। এখন থেকে নতুন ইউজারনেম দিয়ে লগইন করতে হবে (পাসওয়ার্ড আগের মতোই থাকবে)।');
+            } catch (err) {
+                console.error(err);
+                alert('ইউজারনেম পরিবর্তন করা যায়নি। ইন্টারনেট সংযোগ ও Firestore অনুমতি পরীক্ষা করুন।');
+            }
+        }
+
         function updateUserRole(staffId, newRole) {
             if (currentUser.role !== 'Super Admin') {
                 alert('মেয়র আইডি ব্যতীত রোল পরিবর্তন করা সম্ভব নয়।');
@@ -930,7 +975,7 @@
 
                 tr.innerHTML = `
                     <td class="p-3 font-medium text-gray-800">${esc(s.name)}</td>
-                    <td class="p-3 text-gray-600">${esc(s.username)}</td>
+                    <td class="p-3 text-gray-600 whitespace-nowrap">${esc(s.username)} <button type="button" onclick="editUsername('${esc(s.id)}')" title="ইউজারনেম পরিবর্তন করুন" class="text-emerald-600 hover:text-emerald-800 ml-1 text-xs"><i class="fa-solid fa-pen-to-square"></i></button></td>
                     <td class="p-3 text-gray-600">${esc(s.branch) || '-'}</td>
                     <td class="p-3">
                         <select onchange="updateUserRole('${s.id}', this.value)" class="border rounded px-2 py-1 text-xs font-semibold ${getRoleBadgeClass(s.role)}">
@@ -998,16 +1043,140 @@
             empSelect.value = prevEmp;
         }
 
+        // ================= ছবি আপলোড (ফটো অগ্রগতি) =================
+        const PHOTO_MAX = { create: 6, update: 4 };
+        const picked = { create: [], update: [] };   // নির্বাচিত ছবি (কম্প্রেস করা dataURL)
+        let photoCache = {};                          // বর্তমান কাজের ছবি: id -> {data, by, ts, kind}
+        let photoUnsub = null;
+
+        function compressImage(file) {
+            return new Promise((resolve, reject) => {
+                const url = URL.createObjectURL(file);
+                const img = new Image();
+                img.onload = () => {
+                    URL.revokeObjectURL(url);
+                    let maxDim = 1280, out = '';
+                    for (let attempt = 0; attempt < 4; attempt++) {
+                        const sc = Math.min(1, maxDim / Math.max(img.width, img.height));
+                        const w = Math.max(1, Math.round(img.width * sc)), h = Math.max(1, Math.round(img.height * sc));
+                        const c = document.createElement('canvas');
+                        c.width = w; c.height = h;
+                        const ctx = c.getContext('2d');
+                        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);
+                        ctx.drawImage(img, 0, 0, w, h);
+                        let q = 0.72;
+                        out = c.toDataURL('image/jpeg', q);
+                        while (out.length > 650000 && q > 0.4) { q -= 0.1; out = c.toDataURL('image/jpeg', q); }
+                        if (out.length <= 650000) break;
+                        maxDim = Math.round(maxDim * 0.75);
+                    }
+                    out.length <= 900000 ? resolve(out) : reject(new Error('too big'));
+                };
+                img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('bad image')); };
+                img.src = url;
+            });
+        }
+
+        async function pickPhotos(kind, input) {
+            const files = Array.from(input.files || []);
+            input.value = '';
+            const room = PHOTO_MAX[kind] - picked[kind].length;
+            if (files.length > room) alert(`সর্বোচ্চ ${PHOTO_MAX[kind]}টি ছবি দেওয়া যাবে।`);
+            const prev = document.getElementById(kind + 'PhotoPreview');
+            for (const f of files.slice(0, Math.max(room, 0))) {
+                if (!f.type.startsWith('image/')) continue;
+                prev.insertAdjacentHTML('beforeend', '<div class="ph-loading w-16 h-16 rounded-lg border bg-gray-100 flex items-center justify-center text-gray-400"><i class="fa-solid fa-spinner fa-spin"></i></div>');
+                try { picked[kind].push(await compressImage(f)); }
+                catch (e) { alert('একটি ছবি প্রসেস করা যায়নি: ' + f.name); }
+                renderPickedPhotos(kind);
+            }
+        }
+
+        function renderPickedPhotos(kind) {
+            const prev = document.getElementById(kind + 'PhotoPreview');
+            if (!prev) return;
+            prev.innerHTML = picked[kind].map((d, i) => `
+                <div class="relative">
+                    <img src="${d}" class="w-16 h-16 object-cover rounded-lg border">
+                    <button type="button" onclick="removePicked('${kind}', ${i})" class="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-5 h-5 text-xs leading-none">&times;</button>
+                </div>`).join('');
+        }
+
+        function removePicked(kind, i) { picked[kind].splice(i, 1); renderPickedPhotos(kind); }
+
+        function clearPicked(kind) { picked[kind] = []; renderPickedPhotos(kind); }
+
+        async function savePhotos(taskId, kind, arr) {
+            const { doc, setDoc } = window.fs;
+            const ids = arr.map((_, i) => 'ph_' + Date.now() + '_' + i + '_' + Math.random().toString(36).slice(2, 6));
+            await Promise.all(arr.map((data, i) => setDoc(doc(window.db, 'task_photos', ids[i]), {
+                taskId, kind, data, by: currentUser.name, ts: Date.now()
+            })));
+            return ids;
+        }
+
+        function photoThumbs(ids) {
+            return (ids || []).map(id => {
+                const p = photoCache[id];
+                return p
+                    ? `<img src="${p.data}" data-ph="${esc(id)}" class="w-20 h-20 object-cover rounded-lg border cursor-pointer hover:opacity-80">`
+                    : `<div class="w-20 h-20 rounded-lg border bg-gray-100 flex items-center justify-center text-gray-300"><i class="fa-solid fa-image"></i></div>`;
+            }).join('');
+        }
+
+        function bindThumbs(root) {
+            root.querySelectorAll('[data-ph]').forEach(el => el.onclick = () => openLightbox(el.dataset.ph));
+        }
+
+        function openLightbox(id) {
+            const p = photoCache[id];
+            if (!p) return;
+            document.getElementById('lightboxImg').src = p.data;
+            document.getElementById('lightboxCap').textContent = `${p.by || ''} • ${new Date(p.ts || Date.now()).toLocaleString('bn-BD', { dateStyle: 'medium', timeStyle: 'short' })}`;
+            document.getElementById('photoLightbox').classList.remove('hidden');
+        }
+
+        function closeLightbox() {
+            document.getElementById('photoLightbox').classList.add('hidden');
+            document.getElementById('lightboxImg').src = '';
+        }
+
+        function photoCount(t) {
+            return (t.descPhotos ? t.descPhotos.length : 0) + (t.comments || []).reduce((n, c) => n + (c.photos ? c.photos.length : 0), 0);
+        }
+
+        function renderDescPhotos(task) {
+            const box = document.getElementById('modalDescPhotos');
+            box.innerHTML = photoThumbs(task && task.descPhotos);
+            bindThumbs(box);
+        }
+
+        function startPhotoListener(taskId) {
+            stopPhotoListener();
+            const { collection, query, where, onSnapshot } = window.fs;
+            photoUnsub = onSnapshot(query(collection(window.db, 'task_photos'), where('taskId', '==', taskId)), (snap) => {
+                photoCache = {};
+                snap.forEach(d => photoCache[d.id] = d.data());
+                refreshModal();
+            }, (err) => console.error('task_photos', err));
+        }
+
+        function stopPhotoListener() {
+            if (photoUnsub) { photoUnsub(); photoUnsub = null; }
+            photoCache = {};
+        }
+
         function openTaskModal() {
             populateModalStaffDropdowns();
             document.getElementById('taskModal').classList.remove('hidden');
         }
 
         function closeTaskModal() {
+            clearPicked('create');
             document.getElementById('taskModal').classList.add('hidden');
         }
 
-        function handleCreateTask(e) {
+        async function handleCreateTask(e) {
             e.preventDefault();
             const form = e.target;
 
@@ -1039,11 +1208,24 @@
             };
 
             const { doc, setDoc } = window.fs;
-            setDoc(doc(window.db, "tasks", newTask.id), newTask).then(() => {
+            const btn = form.querySelector('button[type="submit"]');
+            const oldTxt = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = picked.create.length ? 'ছবি আপলোড হচ্ছে...' : 'সংরক্ষণ হচ্ছে...';
+            try {
+                const ids = await savePhotos(newTask.id, 'desc', picked.create);
+                if (ids.length) newTask.descPhotos = ids;
+                await setDoc(doc(window.db, "tasks", newTask.id), newTask);
                 closeTaskModal();
                 form.reset();
                 alert('কাজটি সফলভাবে এসাইন করা হয়েছে!');
-            });
+            } catch (err) {
+                console.error(err);
+                alert('কাজটি সংরক্ষণ করা যায়নি। ইন্টারনেট সংযোগ ও Firestore অনুমতি (Rules) পরীক্ষা করুন।');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = oldTxt;
+            }
         }
 
         function renderTasks() {
@@ -1106,7 +1288,7 @@
                         </div>
                     </div>
                     <div class="border-t pt-3 flex justify-between items-center text-xs">
-                        <span class="text-gray-400"><i class="fa-solid fa-comments"></i> ${task.comments ? task.comments.length : 0} আপডেট</span>
+                        <span class="text-gray-400"><i class="fa-solid fa-comments"></i> ${task.comments ? task.comments.length : 0} আপডেট${photoCount(task) ? ` <span class="text-emerald-600 ml-2"><i class="fa-solid fa-camera"></i> ${photoCount(task)}</span>` : ''}</span>
                         <div class="flex gap-2">
                             ${currentUser.role === 'Super Admin' ? `<button data-del="${esc(task.id)}" class="text-red-500 border border-red-200 hover:bg-red-50 px-2 py-1.5 rounded-lg"><i class="fa-solid fa-trash"></i></button>` : ''}
                             <button data-open="${esc(task.id)}" class="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-semibold px-3 py-1.5 rounded-lg transition">ফলোআপ ও বিস্তারিত</button>
@@ -1134,7 +1316,7 @@
                     <td class="p-2 whitespace-nowrap ${late ? 'text-red-600 font-semibold' : 'text-gray-600'}">${esc(t.deadline)}${late ? ' ⚠' : ''}</td>
                     <td class="p-2"><span class="text-xs font-semibold px-2 py-0.5 rounded ${getPriorityBadgeClass(t.priority)}">${esc(t.priority)}</span></td>
                     <td class="p-2"><span class="text-xs px-2.5 py-1 rounded-full font-semibold whitespace-nowrap ${getStatusBadgeClass(t.status)}">${esc(t.status)}</span></td>
-                    <td class="p-2 text-center text-gray-500">${t.comments ? t.comments.length : 0}</td>
+                    <td class="p-2 text-center text-gray-500 whitespace-nowrap">${t.comments ? t.comments.length : 0}${photoCount(t) ? ` <span class="text-emerald-600 ml-1"><i class="fa-solid fa-camera"></i> ${photoCount(t)}</span>` : ''}</td>
                     <td class="p-2 whitespace-nowrap text-center">
                         <button data-open="${esc(t.id)}" class="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-semibold px-2.5 py-1 rounded">বিস্তারিত</button>
                         ${isAdmin ? `<button data-del="${esc(t.id)}" class="text-red-500 border border-red-200 hover:bg-red-50 text-xs px-2 py-1 rounded ml-1"><i class="fa-solid fa-trash"></i></button>` : ''}
@@ -1151,9 +1333,15 @@
             grid.querySelectorAll('[data-del]').forEach(el => el.onclick = () => deleteTask(el.dataset.del));
         }
 
-        function deleteTask(id) {
+        async function deleteTask(id) {
             if (currentUser.role !== 'Super Admin') return;
-            if (confirm('এই কাজটি স্থায়ীভাবে মুছে ফেলবেন?')) window.fs.deleteDoc(window.fs.doc(window.db, "tasks", id));
+            if (!confirm('এই কাজটি (ছবিসহ) স্থায়ীভাবে মুছে ফেলবেন?')) return;
+            const { collection, query, where, getDocs, deleteDoc, doc } = window.fs;
+            try {
+                const snap = await getDocs(query(collection(window.db, 'task_photos'), where('taskId', '==', id)));
+                await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
+            } catch (e) { console.error('photo cleanup', e); }
+            deleteDoc(doc(window.db, "tasks", id));
         }
 
         function refreshModal() {
@@ -1161,6 +1349,7 @@
             const t = allTasks.find(x => x.id === currentViewingTaskId);
             if (!t) { closeFollowupModal(); return; }
             document.getElementById('updateStatusSelect').value = t.status;
+            renderDescPhotos(t);
             renderComments(t.comments || []);
         }
 
@@ -1196,12 +1385,18 @@
             document.getElementById('modalTaskDesc').innerText = task.description || 'কোনো বিস্তারিত বিবরণ দেওয়া হয়নি।';
             document.getElementById('updateStatusSelect').value = task.status;
 
+            clearPicked('update');
+            document.getElementById('newCommentText').value = '';
+            renderDescPhotos(task);
             renderComments(task.comments || []);
+            startPhotoListener(taskId);
             document.getElementById('followupModal').classList.remove('hidden');
         }
 
         function closeFollowupModal() {
             document.getElementById('followupModal').classList.add('hidden');
+            stopPhotoListener();
+            clearPicked('update');
             currentViewingTaskId = null;
         }
 
@@ -1238,27 +1433,45 @@
                         <span>${esc(c.userName)} (${esc(c.userRole)})</span>
                         <span class="text-gray-400 text-[10px]">${esc(c.time)}</span>
                     </div>
-                    <p class="text-gray-600 break-words">${esc(c.text)}</p>
+                    ${c.text ? `<p class="text-gray-600 break-words">${esc(c.text)}</p>` : ''}
+                    ${c.photos && c.photos.length ? `<div class="flex flex-wrap gap-2 mt-2">${photoThumbs(c.photos)}</div>` : ''}
                 `;
+                bindThumbs(div);
                 list.appendChild(div);
             });
 
             list.scrollTop = list.scrollHeight;
         }
 
-        function handleAddComment(e) {
+        async function handleAddComment(e) {
             e.preventDefault();
             if (!currentViewingTaskId) return;
+            const taskId = currentViewingTaskId;
             const input = document.getElementById('newCommentText');
             const text = input.value.trim().slice(0, 1000);
-            if (!text) return;
+            if (!text && picked.update.length === 0) return;
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.textContent = picked.update.length ? 'আপলোড হচ্ছে...' : 'পাঠানো হচ্ছে...';
             const { doc, updateDoc, arrayUnion } = window.fs;
-            updateDoc(doc(window.db, "tasks", currentViewingTaskId), {
-                comments: arrayUnion({
-                    userName: currentUser.name, userRole: currentUser.role || 'কর্মচারী', text,
-                    time: new Date().toLocaleString('bn-BD', { dateStyle: 'short', timeStyle: 'short' })
-                })
-            }).then(() => { input.value = ''; }).catch(() => alert('মন্তব্য পাঠানো যায়নি।'));
+            try {
+                const ids = await savePhotos(taskId, 'update', picked.update);
+                await updateDoc(doc(window.db, "tasks", taskId), {
+                    comments: arrayUnion({
+                        userName: currentUser.name, userRole: currentUser.role || 'কর্মচারী', text,
+                        ...(ids.length ? { photos: ids } : {}),
+                        time: new Date().toLocaleString('bn-BD', { dateStyle: 'short', timeStyle: 'short' })
+                    })
+                });
+                input.value = '';
+                clearPicked('update');
+            } catch (err) {
+                console.error(err);
+                alert('আপডেট/ছবি পাঠানো যায়নি। ইন্টারনেট সংযোগ ও Firestore অনুমতি (Rules) পরীক্ষা করুন।');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'পাঠান';
+            }
         }
 
     </script>
