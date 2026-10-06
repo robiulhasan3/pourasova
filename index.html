@@ -572,7 +572,7 @@
 
         async function seedAdmin() {
             seeding = true;
-            const h = await hashPw('admin', '123');
+            const h = await hashPw('admin', '1234');
             if (h) saveStaffToCloud({ ...DEFAULT_ADMIN, passHash: h });
         }
 
