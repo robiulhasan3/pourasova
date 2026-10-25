@@ -64,7 +64,7 @@
     <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, query, orderBy, addDoc, serverTimestamp, arrayUnion, deleteField, getDoc, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, query, orderBy, addDoc, serverTimestamp, arrayUnion, deleteField, getDoc, where, getDocs, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
 
         const firebaseConfig = {
@@ -82,7 +82,7 @@
         const db = getFirestore(app);
 
         window.db = db;
-        window.fs = { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, query, orderBy, addDoc, serverTimestamp, arrayUnion, deleteField, getDoc, where, getDocs };
+        window.fs = { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, query, orderBy, addDoc, serverTimestamp, arrayUnion, deleteField, getDoc, where, getDocs, limit };
     </script>
 </head>
 <body class="text-gray-800 antialiased">
@@ -170,6 +170,9 @@
                     </button>
                     <button id="tabStaffBtn" onclick="switchTab('staff')" class="hidden px-4 py-2 rounded-lg font-medium text-sm transition text-gray-600 hover:bg-gray-100">
                         <i class="fa-solid fa-users mr-1"></i> স্টাফ ও প্রোফাইল ব্যবস্থাপনা
+                    </button>
+                    <button id="tabSmsBtn" onclick="switchTab('sms')" class="hidden px-4 py-2 rounded-lg font-medium text-sm transition text-gray-600 hover:bg-gray-100">
+                        <i class="fa-solid fa-comment-sms mr-1"></i> এসএমএস
                     </button>
                 </div>
 
@@ -267,6 +270,49 @@
                 </div>
             </div>
 
+
+            <!-- TAB 4: SMS Settings & Log (Super Admin only) -->
+            <div id="smsTabView" class="hidden space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 h-fit space-y-4">
+                        <h3 class="text-lg font-bold text-gray-800 border-b pb-2"><i class="fa-solid fa-gear text-emerald-600 mr-1"></i> এসএমএস সেটিংস</h3>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">API Key</label>
+                            <input type="password" id="smsApiKey" autocomplete="off" placeholder="bulksmsbd API Key" class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-emerald-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Sender ID</label>
+                            <input type="text" id="smsSenderId" placeholder="যেমন: 8809648911052" class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-emerald-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">মেসেজ টাইপ</label>
+                            <select id="smsType" class="w-full px-3 py-2 text-sm border rounded-lg">
+                                <option value="text">text (ডিফল্ট)</option>
+                                <option value="unicode">unicode (বাংলা অক্ষর ভাঙলে এটি চেষ্টা করুন)</option>
+                            </select>
+                        </div>
+                        <div class="space-y-2 text-sm text-gray-700">
+                            <label class="flex items-center gap-2"><input type="checkbox" id="smsEnabled"> <b>এসএমএস সেবা চালু</b></label>
+                            <p class="text-[11px] text-gray-500">কোনো এসএমএস নিজে থেকে যাবে না। কাজ বা আবেদনের বিস্তারিত পেজের "এসএমএস পাঠান" বাটনে ক্লিক করে মেসেজ দেখে নিশ্চিত করলে তবেই যাবে।</p>
+                        </div>
+                        <button onclick="saveSmsSettings()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium py-2 rounded-lg">সেটিংস সংরক্ষণ করুন</button>
+                        <div class="border-t pt-3 space-y-2">
+                            <button onclick="checkSmsBalance()" class="w-full border border-emerald-600 text-emerald-700 hover:bg-emerald-50 text-sm py-2 rounded-lg"><i class="fa-solid fa-wallet mr-1"></i> ব্যালেন্স দেখুন</button>
+                            <p id="smsBalanceOut" class="text-xs text-gray-600 text-center"></p>
+                        </div>
+                        <div class="border-t pt-3 space-y-2">
+                            <label class="block text-xs font-semibold text-gray-600">টেস্ট এসএমএস</label>
+                            <input type="tel" id="smsTestNumber" placeholder="01XXXXXXXXX" class="w-full px-3 py-2 text-sm border rounded-lg">
+                            <button onclick="sendTestSms()" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm py-2 rounded-lg"><i class="fa-solid fa-paper-plane mr-1"></i> টেস্ট পাঠান</button>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2"><i class="fa-solid fa-clock-rotate-left text-emerald-600 mr-1"></i> সাম্প্রতিক এসএমএস লগ (সর্বশেষ ৫০টি)</h3>
+                        <div id="smsLogBox" class="overflow-x-auto custom-scrollbar"><p class="text-xs text-gray-400 text-center py-6">লোড হচ্ছে...</p></div>
+                    </div>
+                </div>
+            </div>
+
             <div id="staffTabView" class="hidden space-y-6">
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     
@@ -289,6 +335,10 @@
                             <div>
                                 <label class="block text-xs font-semibold text-gray-600 mb-1">পাসওয়ার্ড *</label>
                                 <input type="password" id="staffPassword" required placeholder="••••••••" class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-emerald-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1">মোবাইল নম্বর (এসএমএসের জন্য)</label>
+                                <input type="tel" id="staffMobile" inputmode="tel" maxlength="14" placeholder="01XXXXXXXXX" class="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-emerald-500">
                             </div>
                             <div>
                                 <label class="block text-xs font-semibold text-gray-600 mb-1">শাখা</label>
@@ -320,6 +370,7 @@
                                     <tr>
                                         <th class="p-3">স্টাফের নাম</th>
                                         <th class="p-3">ইউজারনেম</th>
+                                        <th class="p-3">মোবাইল</th>
                                         <th class="p-3">শাখা</th>
                                         <th class="p-3">বর্তমান রোল (Role)</th>
                                         <th class="p-3 text-center">একশন</th>
@@ -456,6 +507,7 @@
                     <div><strong>তদারককারী (Supervisors):</strong> <span id="modalSupervisorName" class="text-emerald-800 font-medium">-</span></div>
                     <div><strong>দায়িত্বপ্রাপ্ত কর্মী:</strong> <span id="modalEmployeeName" class="text-blue-800 font-medium">-</span></div>
                 </div>
+                <div id="taskSmsRow" class="hidden"><button type="button" onclick="smsComposeForTask()" class="w-full border border-emerald-600 text-emerald-700 hover:bg-emerald-50 text-sm py-2 rounded-lg"><i class="fa-solid fa-comment-dots mr-1"></i> এসএমএস / WhatsApp বার্তা</button></div>
 
                 <div>
                     <p class="font-semibold text-gray-700">বিবরণ:</p>
@@ -579,6 +631,10 @@
                 refreshModal();
             }, (err) => console.error('tasks', err));
 
+            window.fs.onSnapshot(window.fs.doc(window.db, 'settings', 'sms'), (snap) => {
+                smsCfg = snap.exists() ? snap.data() : {};
+            }, (err) => console.error('sms settings', err));
+
             const chatQuery = query(collection(window.db, "public_chats"), orderBy("timestamp", "asc"));
             onSnapshot(chatQuery, (snapshot) => {
                 const messages = [];
@@ -663,6 +719,7 @@
             localStorage.removeItem('bp_uid');
             closeTaskModal(); closeFollowupModal();
             if (appsUnsub) { appsUnsub(); appsUnsub = null; } allApps = [];
+            if (smsLogUnsub) { smsLogUnsub(); smsLogUnsub = null; }
             showAuth();
         }
 
@@ -682,8 +739,10 @@
 
             if (currentUser.role === 'Super Admin') {
                 document.getElementById('tabStaffBtn').classList.remove('hidden');
+                document.getElementById('tabSmsBtn').classList.remove('hidden');
             } else {
                 document.getElementById('tabStaffBtn').classList.add('hidden');
+                document.getElementById('tabSmsBtn').classList.add('hidden');
             }
 
             document.getElementById('assignTaskBtn').classList.toggle('hidden', currentUser.role === 'Employee');
@@ -696,19 +755,21 @@
         }
 
         function switchTab(tab) {
-            if (tab === 'staff' && currentUser.role !== 'Super Admin') {
+            if ((tab === 'staff' || tab === 'sms') && currentUser.role !== 'Super Admin') {
                 alert('মেয়র বা সুপার এডমিন ব্যতীত অন্য কেউ প্রোফাইল বা শাখা পরিচালনা করতে পারবেন না।');
                 return;
             }
             const on = "px-4 py-2 rounded-lg font-medium text-sm transition bg-emerald-600 text-white";
             const off = "px-4 py-2 rounded-lg font-medium text-sm transition text-gray-600 hover:bg-gray-100";
-            ['tasks', 'apps', 'staff'].forEach(t => {
+            ['tasks', 'apps', 'staff', 'sms'].forEach(t => {
                 document.getElementById(t + 'TabView').classList.toggle('hidden', t !== tab);
                 const b = document.getElementById('tab' + t[0].toUpperCase() + t.slice(1) + 'Btn');
-                b.className = (t === 'staff' ? 'hidden ' : '') + (t === tab ? on : off);
-                if (t === 'staff' && currentUser.role === 'Super Admin') b.classList.remove('hidden');
+                const adminOnly = (t === 'staff' || t === 'sms');
+                b.className = (adminOnly ? 'hidden ' : '') + (t === tab ? on : off);
+                if (adminOnly && currentUser.role === 'Super Admin') b.classList.remove('hidden');
             });
             if (tab === 'apps') renderApps();
+            if (tab === 'sms') { fillSmsForm(); startSmsLogListener(); }
             if (tab === 'tasks') requestAnimationFrame(renderPublicChats);
         }
 
@@ -823,6 +884,7 @@
                 ${a.approvedBy ? row('সিদ্ধান্ত', `${a.status === 'অনুমোদিত' || a.status === 'নিষ্পত্তি' ? 'অনুমোদন' : 'প্রত্যাখ্যান'}: ${a.approvedBy} | ${fmtDT(a.approvedAt)}`) : ''}
                 ${a.resolutionNote ? row(a.status === 'প্রত্যাখ্যাত' ? 'প্রত্যাখ্যানের কারণ' : 'নিষ্পত্তির বিবরণ', a.resolutionNote + (a.resolvedAt ? ' | ' + fmtDT(a.resolvedAt) : '')) : ''}
                 <div class="flex gap-2">${act}</div>
+                <button type="button" onclick="smsComposeForApp()" class="w-full border border-emerald-600 text-emerald-700 hover:bg-emerald-50 text-sm py-2 rounded-lg"><i class="fa-solid fa-comment-dots mr-1"></i> আবেদনকারীকে এসএমএস / WhatsApp বার্তা</button>
                 <div class="border-t pt-3"><h4 class="font-bold mb-2">ফলোআপ নোট</h4><div class="space-y-2 max-h-40 overflow-y-auto custom-scrollbar mb-2">${notes}</div>
                 <div class="flex gap-2"><input id="app_note" maxlength="500" placeholder="ফলোআপ আপডেট লিখুন..." class="flex-1 ${fld}"><button onclick="addAppNote()" class="bg-emerald-600 text-white px-4 rounded-lg text-sm">যোগ</button></div></div></div>`);
             if (keep) document.getElementById('app_note').value = keep;
@@ -848,6 +910,219 @@
                 else { upd.approvedBy = currentUser.name; upd.approvedAt = Date.now(); }
             }
             window.fs.updateDoc(window.fs.doc(window.db, 'applications', currentAppId), upd).catch(() => alert('আপডেট করা যায়নি।'));
+        }
+
+
+        // ===== এসএমএস মডিউল (bulksmsbd.net) =====
+        let smsCfg = {}, smsLogUnsub = null;
+        const SMS_ENDPOINT = 'bulksmsbd.net/api/smsapi';
+        const SMS_BAL_ENDPOINT = 'bulksmsbd.net/api/getBalanceApi';
+        const SMS_CODES = {
+            202: 'সফলভাবে পাঠানো হয়েছে', 1001: 'নম্বর সঠিক নয়', 1002: 'Sender ID ভুল/নিষ্ক্রিয়', 1003: 'প্রয়োজনীয় তথ্য অনুপস্থিত',
+            1005: 'ইন্টারনাল এরর', 1006: 'ব্যালেন্স যাচাই এরর', 1007: 'ব্যালেন্স অপর্যাপ্ত', 1011: 'ইউজার আইডি পাওয়া যায়নি',
+            1012: 'মাসকিং এসএমএস শুধু ইংরেজি', 1013: 'API Key দিয়ে Sender ID পাওয়া যায়নি', 1014: 'Sender Type Name পাওয়া যায়নি',
+            1015: 'কোনো বৈধ Sender ID নেই', 1016: 'Sender ID এর Active Price Info নেই', 1017: 'Sender ID এর Price Info নেই',
+            1018: 'অ্যাকাউন্ট নিষ্ক্রিয়', 1019: 'Sender ID এর মূল্য নিষ্ক্রিয়', 1020: 'পার্টনার অ্যাকাউন্ট পাওয়া যায়নি',
+            1021: 'পার্টনারের Price Info নেই', 1031: 'অ্যাকাউন্ট ভেরিফাই হয়নি', 1032: 'IP হোয়াইটলিস্টে নেই'
+        };
+
+        function normMobile(v) {
+            let d = bn2en(v);
+            if (d.length === 11 && d.startsWith('01')) return '88' + d;
+            if (d.length === 13 && d.startsWith('8801')) return d;
+            return '';
+        }
+
+        function smsToast(msg, bad) {
+            let t = document.getElementById('smsToast');
+            if (!t) { t = document.createElement('div'); t.id = 'smsToast'; document.body.appendChild(t); }
+            t.className = 'fixed bottom-4 left-1/2 -translate-x-1/2 z-[80] text-white text-xs px-4 py-2 rounded-lg shadow-lg ' + (bad ? 'bg-red-600' : 'bg-emerald-700');
+            t.textContent = msg;
+            clearTimeout(t._h); t._h = setTimeout(() => t.remove(), 4000);
+        }
+
+        function smsReady() {
+            return !!(smsCfg && smsCfg.enabled && smsCfg.apiKey && smsCfg.senderId);
+        }
+
+        function mobilesOfNames(names, exceptId) {
+            const out = [];
+            (names || []).forEach(n => {
+                const s = allStaff.find(x => x.name === n);
+                if (s && s.id !== exceptId && s.mobile) out.push(s.mobile);
+            });
+            return out;
+        }
+
+        // মূল পাঠানোর ফাংশন। কখনো এক্সেপশন ছোঁড়ে না, লগ রাখে।
+        async function sendSMS(numbers, message, ctx, opts) {
+            opts = opts || {};
+            const list = [...new Set((numbers || []).map(normMobile).filter(Boolean))];
+            if (!list.length) return { ok: false, status: 'নম্বর নেই' };
+            if (!opts.force && !smsReady()) return { ok: false, status: 'এসএমএস সেবা বন্ধ বা সেটিংস অসম্পূর্ণ' };
+            const cfg = smsCfg;
+            const body = new URLSearchParams({ api_key: cfg.apiKey, type: cfg.smsType || 'text', number: list.join(','), senderid: cfg.senderId, message });
+            let status = '', ok = false, raw = '';
+            const hosts = location.protocol === 'https:' ? ['https://'] : ['https://', 'http://'];
+            for (const h of hosts) {
+                try {
+                    const r = await fetch(h + SMS_ENDPOINT, { method: 'POST', body });
+                    raw = (await r.text()).slice(0, 300);
+                    let code = null;
+                    try { code = JSON.parse(raw).response_code; } catch (e) {}
+                    if (code == null) { const m = raw.match(/\b(\d{3,4})\b/); code = m ? +m[1] : null; }
+                    ok = code === 202;
+                    status = (code != null ? code + ': ' : '') + (SMS_CODES[code] || raw || 'অজানা উত্তর');
+                    break;
+                } catch (e) {
+                    // CORS ব্লক করলে উত্তর পড়া যায় না, তবে অনুরোধ সার্ভারে পৌঁছাতে পারে
+                    try {
+                        await fetch(h + SMS_ENDPOINT, { method: 'POST', body, mode: 'no-cors' });
+                        ok = true; status = 'পাঠানো হয়েছে (সার্ভারের উত্তর যাচাই করা যায়নি)';
+                        break;
+                    } catch (e2) { status = 'নেটওয়ার্ক ত্রুটি'; }
+                }
+            }
+            try {
+                window.fs.addDoc(window.fs.collection(window.db, 'sms_logs'), {
+                    to: list, message, ctx: ctx || '', ok, status, raw, by: currentUser ? currentUser.name : '', ts: Date.now()
+                });
+            } catch (e) { console.error('sms log', e); }
+            if (!opts.silent) smsToast(ok ? 'এসএমএস পাঠানো হয়েছে (' + list.length + ' জন)' : 'এসএমএস ব্যর্থ: ' + status, !ok);
+            return { ok, status };
+        }
+
+        function fillSmsForm() {
+            const c = smsCfg || {};
+            document.getElementById('smsApiKey').value = c.apiKey || '';
+            document.getElementById('smsSenderId').value = c.senderId || '';
+            document.getElementById('smsType').value = c.smsType || 'text';
+            document.getElementById('smsEnabled').checked = !!c.enabled;
+        }
+
+        async function saveSmsSettings() {
+            if (!isMayor()) { alert('কেবল সুপার এডমিন সেটিংস পরিবর্তন করতে পারবেন।'); return; }
+            const data = {
+                apiKey: document.getElementById('smsApiKey').value.trim(),
+                senderId: document.getElementById('smsSenderId').value.trim(),
+                smsType: document.getElementById('smsType').value,
+                enabled: document.getElementById('smsEnabled').checked,
+                updatedBy: currentUser.name, updatedAt: Date.now()
+            };
+            if (data.enabled && (!data.apiKey || !data.senderId)) { alert('চালু করতে API Key ও Sender ID দিন।'); return; }
+            try { await window.fs.setDoc(window.fs.doc(window.db, 'settings', 'sms'), data); alert('এসএমএস সেটিংস সংরক্ষিত হয়েছে।'); }
+            catch (e) { console.error(e); alert('সংরক্ষণ করা যায়নি। Firestore অনুমতি (Rules) পরীক্ষা করুন।'); }
+        }
+
+        async function checkSmsBalance() {
+            const out = document.getElementById('smsBalanceOut');
+            const key = document.getElementById('smsApiKey').value.trim();
+            if (!key) { out.textContent = 'আগে API Key দিন।'; return; }
+            out.textContent = 'যাচাই হচ্ছে...';
+            try {
+                const r = await fetch('https://' + SMS_BAL_ENDPOINT + '?api_key=' + encodeURIComponent(key));
+                const t = (await r.text()).trim();
+                let bal = t; try { const j = JSON.parse(t); bal = j.balance ?? j.Balance ?? t; } catch (e) {}
+                out.textContent = 'ব্যালেন্স: ' + bal;
+            } catch (e) {
+                out.textContent = 'ব্রাউজার ব্যালেন্সের উত্তর পড়তে দেয়নি (CORS)। bulksmsbd.net ড্যাশবোর্ডে ব্যালেন্স দেখুন।';
+            }
+        }
+
+        async function sendTestSms() {
+            const num = document.getElementById('smsTestNumber').value;
+            if (!normMobile(num)) { alert('সঠিক মোবাইল নম্বর দিন।'); return; }
+            if (!document.getElementById('smsApiKey').value.trim() || !document.getElementById('smsSenderId').value.trim()) { alert('API Key ও Sender ID দিন।'); return; }
+            const saved = smsCfg;
+            smsCfg = { ...smsCfg, apiKey: document.getElementById('smsApiKey').value.trim(), senderId: document.getElementById('smsSenderId').value.trim(), smsType: document.getElementById('smsType').value, enabled: true };
+            const r = await sendSMS([num], 'বাঞ্ছারামপুর পৌরসভা: এটি একটি টেস্ট এসএমএস। Test SMS.', 'test', { force: true });
+            smsCfg = saved;
+            alert((r.ok ? 'সফল: ' : 'ব্যর্থ: ') + r.status + '\n\nফোনে বাংলা ঠিকভাবে এলো কি না দেখুন; না এলে মেসেজ টাইপ "unicode" করে আবার টেস্ট করুন।');
+        }
+
+        function startSmsLogListener() {
+            if (smsLogUnsub || !window.db) return;
+            const { collection, query, orderBy, limit, onSnapshot } = window.fs;
+            smsLogUnsub = onSnapshot(query(collection(window.db, 'sms_logs'), orderBy('ts', 'desc'), limit(50)), (snap) => {
+                const box = document.getElementById('smsLogBox'); if (!box) return;
+                const rows = [];
+                snap.forEach(d => rows.push(d.data()));
+                if (!rows.length) { box.innerHTML = '<p class="text-xs text-gray-400 text-center py-6">এখনো কোনো এসএমএস পাঠানো হয়নি।</p>'; return; }
+                box.innerHTML = `<table class="w-full text-xs text-left"><thead class="bg-emerald-700 text-white"><tr><th class="p-2">সময়</th><th class="p-2">প্রাপক</th><th class="p-2">বার্তা</th><th class="p-2">ফলাফল</th></tr></thead><tbody>` +
+                    rows.map(r => `<tr class="border-b ${r.ok ? '' : 'bg-red-50'}"><td class="p-2 whitespace-nowrap">${esc(fmtDT(r.ts))}</td><td class="p-2">${esc((r.to || []).join(', '))}</td><td class="p-2 min-w-[200px] break-words">${esc(r.message)}</td><td class="p-2 ${r.ok ? 'text-green-700' : 'text-red-600'}">${esc(r.status)}</td></tr>`).join('') + '</tbody></table>';
+            }, (err) => console.error('sms_logs', err));
+        }
+
+        async function editMobile(id) {
+            if (!isMayor()) { alert('কেবল সুপার এডমিন মোবাইল নম্বর পরিবর্তন করতে পারবেন।'); return; }
+            const t = allStaff.find(x => x.id === id); if (!t) return;
+            const input = prompt(`"${t.name}" এর মোবাইল নম্বর (ফাঁকা রাখলে মুছে যাবে):`, t.mobile || '');
+            if (input === null) return;
+            const m = bn2en(input);
+            if (m && !/^01[3-9]\d{8}$/.test(m)) { alert('সঠিক ১১ সংখ্যার মোবাইল নম্বর দিন (যেমন 01712345678)।'); return; }
+            try { await window.fs.updateDoc(window.fs.doc(window.db, 'staffs', id), { mobile: m }); }
+            catch (e) { alert('নম্বর সংরক্ষণ করা যায়নি।'); }
+        }
+
+        // ম্যানুয়াল এসএমএস: মেসেজ দেখে নিশ্চিত করার পর ক্লিক করলে তবেই যাবে
+        let smsComposeCtx = null;
+        function openSmsCompose(title, recipients, text, ctx) {
+            smsComposeCtx = ctx;
+            const smsOn = smsReady();
+            const list = recipients.map((r, i) => {
+                const ok = !!normMobile(r.mobile);
+                return `<label class="flex items-center gap-2 text-sm ${ok ? '' : 'text-gray-400'}"><input type="checkbox" class="sms-rcpt" value="${esc(r.mobile || '')}" ${ok ? 'checked' : 'disabled'}> <span>${esc(r.label)} <span class="text-xs text-gray-500">${ok ? esc(r.mobile) : '(মোবাইল নম্বর নেই)'}</span></span>${ok ? `<button type="button" onclick="openWhatsApp('${esc(r.mobile)}')" title="হোয়াটসঅ্যাপে পাঠান" class="ml-auto shrink-0 text-xs bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded"><i class="fa-brands fa-whatsapp mr-1"></i>WhatsApp</button>` : ''}</label>`;
+            }).join('');
+            mkModal('smsComposeModal', mHead(title, 'smsComposeModal') + `<div class="p-5 space-y-3 text-sm">
+                <div><p class="text-xs font-semibold text-gray-600 mb-1">প্রাপক</p><div class="space-y-1">${list || '<p class="text-xs text-gray-400">কোনো প্রাপক নেই।</p>'}</div></div>
+                <div><label class="text-xs font-semibold text-gray-600">বার্তা (পাঠানোর আগে সম্পাদনা করতে পারবেন)</label>
+                <textarea id="smsComposeText" rows="5" maxlength="600" class="${fld}" oninput="document.getElementById('smsComposeCount').textContent=this.value.length">${esc(text)}</textarea>
+                <p class="text-[11px] text-gray-400 text-right"><span id="smsComposeCount">${text.length}</span> অক্ষর</p></div>
+                <div class="flex gap-2"><button type="button" onclick="closeM('smsComposeModal')" class="flex-1 border rounded-lg py-2 hover:bg-gray-100">বাতিল</button>
+                ${smsOn ? `<button type="button" id="smsComposeBtn" onclick="confirmSmsSend()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg py-2"><i class="fa-solid fa-paper-plane mr-1"></i> নির্বাচিতদের এসএমএস</button>` : ''}</div>
+                ${smsOn ? '' : '<p class="text-[11px] text-gray-500">এসএমএস সেবা বন্ধ। প্রাপকের পাশের WhatsApp বাটন ব্যবহার করুন।</p>'}
+                <p class="text-[11px] text-gray-500">WhatsApp বাটন চাপলে আপনার WhatsApp-এ বার্তাটি তৈরি অবস্থায় খুলবে; সেখানে Send চাপলে তবেই যাবে।</p></div>`);
+        }
+
+        function openWhatsApp(mobile) {
+            const n = normMobile(mobile);
+            if (!n) { alert('সঠিক মোবাইল নম্বর নেই।'); return; }
+            const text = document.getElementById('smsComposeText').value.trim();
+            window.open('https://wa.me/' + n + (text ? '?text=' + encodeURIComponent(text) : ''), '_blank', 'noopener');
+            try {
+                window.fs.addDoc(window.fs.collection(window.db, 'sms_logs'), { to: [n], message: text, ctx: (smsComposeCtx || '') + ' [whatsapp]', ok: true, status: 'WhatsApp খোলা হয়েছে (ব্যবহারকারী নিজে Send করবেন)', raw: '', by: currentUser ? currentUser.name : '', ts: Date.now() });
+            } catch (e) {}
+        }
+
+        async function confirmSmsSend() {
+            const nums = Array.from(document.querySelectorAll('.sms-rcpt:checked')).map(c => c.value);
+            const text = document.getElementById('smsComposeText').value.trim();
+            if (!nums.length) { alert('অন্তত একজন প্রাপক নির্বাচন করুন।'); return; }
+            if (!text) { alert('বার্তা লিখুন।'); return; }
+            const btn = document.getElementById('smsComposeBtn');
+            btn.disabled = true; btn.textContent = 'পাঠানো হচ্ছে...';
+            const r = await sendSMS(nums, text, smsComposeCtx || 'manual');
+            if (r.ok) closeM('smsComposeModal');
+            else { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane mr-1"></i> আবার চেষ্টা করুন'; }
+        }
+
+        function smsComposeForTask() {
+            const t = allTasks.find(x => x.id === currentViewingTaskId); if (!t) return;
+            const me = currentUser.id;
+            const rec = [];
+            const add = (name, role) => { const st = allStaff.find(x => x.name === name); if (st && !rec.some(r => r.label.startsWith(st.name + ' '))) rec.push({ label: `${st.name} (${role})`, mobile: st.mobile }); };
+            add(t.assignedTo, 'কর্মী');
+            (Array.isArray(t.supervisors) ? t.supervisors : []).filter(n => n !== 'নির্ধারিত নয়').forEach(n => add(n, 'তদারককারী'));
+            const text = `বাঞ্ছারামপুর পৌরসভা: "${t.title}" কাজটি বর্তমানে ${t.status}। ডেডলাইন: ${t.deadline}। অনুগ্রহ করে অগ্রগতি জানান।`;
+            openSmsCompose('কাজ সংক্রান্ত বার্তা (এসএমএস / WhatsApp)', rec, text, 'task:' + t.id);
+        }
+
+        function smsComposeForApp() {
+            const a = allApps.find(x => x.id === currentAppId); if (!a) return;
+            let text = `বাঞ্ছারামপুর পৌরসভা: ${a.name}, আপনার আবেদনের (ট্র্যাকিং নং ${a.id}) বর্তমান অবস্থা: ${a.status}।`;
+            if (a.status === 'নিষ্পত্তি' && a.resolutionNote) text += ` ${a.resolutionNote}`;
+            if (a.status === 'প্রত্যাখ্যাত' && a.resolutionNote) text += ` কারণ: ${a.resolutionNote}`;
+            openSmsCompose('আবেদনকারীকে বার্তা (এসএমএস / WhatsApp)', [{ label: a.name + ' (আবেদনকারী)', mobile: a.mobile }], text, 'app:' + a.id);
         }
 
         // --- PUBLIC CHATBOX LOGIC ---
@@ -903,6 +1178,9 @@
             const username = document.getElementById('staffUsername').value.trim();
             const password = document.getElementById('staffPassword').value;
             const branch = document.getElementById('staffBranch').value;
+            const mobRaw = document.getElementById('staffMobile').value.trim();
+            const mobile = mobRaw ? bn2en(mobRaw) : '';
+            if (mobRaw && !/^01[3-9]\d{8}$/.test(mobile)) { alert('সঠিক ১১ সংখ্যার মোবাইল নম্বর দিন (যেমন 01712345678)।'); return; }
             if (password.length < 6) { alert('পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।'); return; }
             if (allStaff.some(s => s.username.toLowerCase() === username.toLowerCase())) {
                 alert('এই ইউজারনেমটি আগে থেকেই রয়েছে! অন্য ইউজারনেম ব্যবহার করুন।'); return;
@@ -910,7 +1188,7 @@
             if (allStaff.some(s => s.name === name)) { alert('এই নামে আরেকজন স্টাফ আছে। নামের সাথে পদবি/শাখা যোগ করে আলাদা করুন।'); return; }
             const passHash = await hashPw(username, password);
             if (!passHash) { alert('নিরাপদ সংযোগ (https) বা localhost এ চালান।'); return; }
-            saveStaffToCloud({ id: 'staff_' + Date.now(), name, username, passHash, branch, role: 'Employee' });
+            saveStaffToCloud({ id: 'staff_' + Date.now(), name, username, passHash, branch, role: 'Employee', mobile });
             form.reset();
             alert('নতুন স্টাফ সফলভাবে নিবন্ধিত হয়েছে!');
         }
@@ -976,6 +1254,7 @@
                 tr.innerHTML = `
                     <td class="p-3 font-medium text-gray-800">${esc(s.name)}</td>
                     <td class="p-3 text-gray-600 whitespace-nowrap">${esc(s.username)} <button type="button" onclick="editUsername('${esc(s.id)}')" title="ইউজারনেম পরিবর্তন করুন" class="text-emerald-600 hover:text-emerald-800 ml-1 text-xs"><i class="fa-solid fa-pen-to-square"></i></button></td>
+                    <td class="p-3 text-gray-600 whitespace-nowrap">${esc(s.mobile) || '<span class="text-red-400 text-xs">নেই</span>'} <button type="button" onclick="editMobile('${esc(s.id)}')" title="মোবাইল নম্বর পরিবর্তন করুন" class="text-emerald-600 hover:text-emerald-800 ml-1 text-xs"><i class="fa-solid fa-pen-to-square"></i></button></td>
                     <td class="p-3 text-gray-600">${esc(s.branch) || '-'}</td>
                     <td class="p-3">
                         <select onchange="updateUserRole('${s.id}', this.value)" class="border rounded px-2 py-1 text-xs font-semibold ${getRoleBadgeClass(s.role)}">
@@ -1390,6 +1669,7 @@
             renderDescPhotos(task);
             renderComments(task.comments || []);
             startPhotoListener(taskId);
+            document.getElementById('taskSmsRow').classList.toggle('hidden', currentUser.role === 'Employee');
             document.getElementById('followupModal').classList.remove('hidden');
         }
 
